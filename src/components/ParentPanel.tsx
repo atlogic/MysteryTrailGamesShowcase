@@ -26,7 +26,7 @@ import {
   Lock,
   QrCode
 } from 'lucide-react';
-import { loadSessionsFromFirebase, loadUserGamesFromFirebase, generateGameId, GAME_ID_KEY, TRANSLATIONS } from '../constants';
+import { loadSessionsFromFirebase, loadUserGamesFromFirebase, loadSessionResults, generateGameId, GAME_ID_KEY, TRANSLATIONS } from '../constants';
 import { GameSession, GameData, Language } from '../types';
 import { Toast, ToastType, ConfirmModal } from './Toast';
 import { 
@@ -195,11 +195,33 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
     setIsLoadingSessions(true);
     try {
       const data = await loadSessionsFromFirebase(gameId);
+      // Results are now lazy loaded, so we initialize sessions without them
       setSessions(data);
     } catch (err) {
       console.error("History load error:", err);
     } finally {
       setIsLoadingSessions(false);
+    }
+  };
+
+  const toggleSession = async (session: GameSession) => {
+    if (selectedSession?.id === session.id) {
+      setSelectedSession(null);
+      return;
+    }
+    
+    setSelectedSession(session);
+    
+    // If results are not loaded yet, fetch them from the sub-collection
+    if (!session.results) {
+      try {
+        const results = await loadSessionResults(session.id);
+        setSessions(prev => prev.map(s => s.id === session.id ? { ...s, results } : s));
+        // Update selected session to show the results immediately
+        setSelectedSession({ ...session, results });
+      } catch (err) {
+        console.error("Error loading session results:", err);
+      }
     }
   };
 
@@ -736,7 +758,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
                   {sessions.map(session => (
                     <div key={session.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                       <button 
-                        onClick={() => setSelectedSession(selectedSession?.id === session.id ? null : session)}
+                        onClick={() => toggleSession(session)}
                         className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
                       >
                         <div className="flex items-center gap-4">
@@ -764,34 +786,41 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
                           </div>
 
                           <div className="space-y-3">
-                            {session.results.map((res, idx) => {
-                              const cp = checkpoints.find(c => c.id === res.checkpointId);
-                              return (
-                                <div key={idx} className="bg-white p-3 rounded-lg border border-gray-100 space-y-2">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-black text-green-600 uppercase">{t.step} #{idx + 1}: {cp?.name || t.unknown}</span>
-                                    {res.bestPerformer && (
-                                      <span className="flex items-center gap-1 text-[10px] font-black text-yellow-600 uppercase">
-                                        <Star size={10} fill="currentColor" /> {res.bestPerformer}
-                                      </span>
-                                    )}
+                            {session.results ? (
+                              session.results.map((res, idx) => {
+                                const cp = checkpoints.find(c => c.id === res.checkpointId);
+                                return (
+                                  <div key={idx} className="bg-white p-3 rounded-lg border border-gray-100 space-y-2">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] font-black text-green-600 uppercase">{t.step} #{idx + 1}: {cp?.name || t.unknown}</span>
+                                      {res.bestPerformer && (
+                                        <span className="flex items-center gap-1 text-[10px] font-black text-yellow-600 uppercase">
+                                          <Star size={10} fill="currentColor" /> {res.bestPerformer}
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex gap-2">
+                                      {res.photo && (
+                                        <div className="w-20 h-20 rounded-md overflow-hidden border border-gray-100">
+                                          <img src={res.photo} alt="Result" className="w-full h-full object-cover" />
+                                        </div>
+                                      )}
+                                      {res.audio && (
+                                        <div className="flex-1 flex items-center">
+                                          <audio controls src={res.audio} className="w-full h-8 scale-90 origin-left" />
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  
-                                  <div className="flex gap-2">
-                                    {res.photo && (
-                                      <div className="w-20 h-20 rounded-md overflow-hidden border border-gray-100">
-                                        <img src={res.photo} alt="Result" className="w-full h-full object-cover" />
-                                      </div>
-                                    )}
-                                    {res.audio && (
-                                      <div className="flex-1 flex items-center">
-                                        <audio controls src={res.audio} className="w-full h-8 scale-90 origin-left" />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })
+                            ) : (
+                              <div className="flex flex-col items-center py-6 text-gray-400">
+                                <div className="w-6 h-6 border-2 border-green-200 border-t-green-600 rounded-full animate-spin mb-2" />
+                                <p className="text-[9px] font-bold uppercase">{t.loading}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

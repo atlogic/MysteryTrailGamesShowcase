@@ -23,9 +23,10 @@ export interface CheckpointResult {
 export interface GameSession {
   id: string;
   gameId: string;
+  parentId: string;
   teamName: string;
   members: string[];
-  results: CheckpointResult[];
+  results?: CheckpointResult[];
   timestamp: number;
 }
 

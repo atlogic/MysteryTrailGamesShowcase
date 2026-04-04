@@ -27,6 +27,7 @@ service cloud.firestore {
     function isValidSession(data) {
       return data.id is string &&
              data.gameId is string &&
+             data.parentId is string &&
              data.timestamp is number;
     }
 
@@ -54,11 +55,22 @@ service cloud.firestore {
       allow create: if isValidSession(request.resource.data);
       
       // Only the game owner or admin can read the sessions
-      // We use a get() to check the parent game's ownership
       allow read: if isAuthenticated() && (
         isAdmin() || 
-        get(/databases/$(database)/documents/games/$(resource.data.gameId)).data.parentId == request.auth.uid
+        resource.data.parentId == request.auth.uid
       );
+
+      // Sub-collection for individual checkpoint results
+      match /results/{resultId} {
+        // Anyone can create a result as part of a session
+        allow create: if true;
+        
+        // Only the game owner or admin can read the results
+        allow read: if isAuthenticated() && (
+          isAdmin() || 
+          get(/databases/$(database)/documents/sessions/$(sessionId)).data.parentId == request.auth.uid
+        );
+      }
     }
 
     match /users/{userId} {

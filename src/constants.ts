@@ -288,7 +288,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     methodWarning: "Changing method will clear current passcode settings!",
   }
 };
-import { doc, setDoc, getDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, limit, orderBy, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, auth } from './firebase';
 
 export const DEFAULT_CHECKPOINTS: Checkpoint[] = [
@@ -403,10 +403,37 @@ export const loadGameFromFirebase = async (gameId: string): Promise<GameData | n
 export const saveSessionToFirebase = async (session: GameSession) => {
   const path = `sessions/${session.id}`;
   try {
+    const { results, ...sessionData } = session;
     const sessionRef = doc(db, 'sessions', session.id);
-    await setDoc(sessionRef, session);
+    
+    // Save session metadata
+    await setDoc(sessionRef, sessionData);
+    
+    // Save each result as a separate document in a sub-collection
+    if (results && results.length > 0) {
+      const batch = writeBatch(db);
+      results.forEach((result, index) => {
+        // We use a predictable ID for the result to avoid duplicates if retried
+        const resultId = `${session.id}_res_${index}`;
+        const resultRef = doc(db, `sessions/${session.id}/results`, resultId);
+        batch.set(resultRef, result);
+      });
+      await batch.commit();
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
+export const loadSessionResults = async (sessionId: string): Promise<CheckpointResult[]> => {
+  const path = `sessions/${sessionId}/results`;
+  try {
+    const resultsRef = collection(db, `sessions/${sessionId}/results`);
+    const snap = await getDocs(resultsRef);
+    return snap.docs.map(doc => doc.data() as CheckpointResult);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
   }
 };
 

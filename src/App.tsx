@@ -57,6 +57,7 @@ export default function App() {
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [verificationMethod, setVerificationMethod] = useState<'qr' | 'passcode'>('qr');
   const [gameId, setGameId] = useState<string>('');
+  const [gameParentId, setGameParentId] = useState<string>('');
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [showParentPanel, setShowParentPanel] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -275,8 +276,8 @@ export default function App() {
       img.onload = () => {
         URL.revokeObjectURL(url);
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
+        const MAX_WIDTH = 600;
+        const MAX_HEIGHT = 600;
         let width = img.width;
         let height = img.height;
 
@@ -296,7 +297,7 @@ export default function App() {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
+        resolve(canvas.toDataURL('image/jpeg', 0.5));
       };
     });
   };
@@ -359,6 +360,7 @@ export default function App() {
     const session: GameSession = {
       id: Date.now().toString(),
       gameId: gameId,
+      parentId: gameParentId,
       teamName: teamInfo.name,
       members: teamInfo.members.filter(m => m.trim() !== ''),
       results: finalResults,
@@ -381,6 +383,7 @@ export default function App() {
         setCheckpoints(gameData.checkpoints);
         setVerificationMethod(gameData.verificationMethod || 'qr');
         setGameId(id.toUpperCase());
+        setGameParentId(gameData.parentId);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData.checkpoints));
         localStorage.setItem(GAME_ID_KEY, id.toUpperCase());
         localStorage.setItem('easter_egg_hunt_method', gameData.verificationMethod || 'qr');
