@@ -49,7 +49,7 @@ service cloud.firestore {
              data.checkpoints.size() < 50 &&
              data.checkpoints.all(cp, isValidCheckpoint(cp)) &&
              data.createdAt is number &&
-             math.abs(data.createdAt - request.time.toMillis()) < 3600000 &&
+             math.abs(data.createdAt - request.time.toMillis()) < 86400000 &&
              (!('verificationMethod' in data) || (data.verificationMethod in ['qr', 'passcode']));
     }
 
@@ -70,7 +70,7 @@ service cloud.firestore {
              data.results.size() < 50 &&
              data.results.all(r, isValidResult(r)) &&
              data.timestamp is number &&
-             math.abs(data.timestamp - request.time.toMillis()) < 60000;
+             math.abs(data.timestamp - request.time.toMillis()) < 86400000;
     }
 
     match /games/{gameId} {
