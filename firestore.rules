@@ -10,97 +10,59 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function hasOnlyAllowedFields(data, allowedFields) {
-      return data.keys().hasOnly(allowedFields);
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "atlogic.eu@gmail.com" && request.auth.token.email_verified == true);
     }
 
-    function isValidCheckpoint(checkpoint) {
-      let allowed = ['id', 'name', 'hint', 'image', 'task', 'requirePhoto', 'requireAudio', 'requireEvaluation', 'qrNumber', 'passcode'];
-      return hasOnlyAllowedFields(checkpoint, allowed) &&
-             checkpoint.id is string &&
-             checkpoint.name is string && checkpoint.name.size() <= 100 &&
-             checkpoint.hint is string && checkpoint.hint.size() <= 1000 &&
-             checkpoint.task is string && checkpoint.task.size() <= 1000 &&
-             (!('image' in checkpoint) || (checkpoint.image is string && checkpoint.image.size() < 500000)) &&
-             (!('passcode' in checkpoint) || (checkpoint.passcode is string && checkpoint.passcode.size() <= 50)) &&
-             checkpoint.qrNumber is int &&
-             checkpoint.requirePhoto is bool &&
-             (!('requireAudio' in checkpoint) || checkpoint.requireAudio is bool) &&
-             (!('requireEvaluation' in checkpoint) || checkpoint.requireEvaluation is bool);
-    }
-
-    function isValidResult(result) {
-      let allowed = ['checkpointId', 'photo', 'audio', 'bestPerformer'];
-      return hasOnlyAllowedFields(result, allowed) &&
-             result.checkpointId is string &&
-             (!('photo' in result) || (result.photo is string && result.photo.size() < 300000)) &&
-             (!('audio' in result) || (result.audio is string && result.audio.size() < 300000)) &&
-             (!('bestPerformer' in result) || (result.bestPerformer is string && result.bestPerformer.size() < 100));
-    }
-
+    // Loose validation for games
     function isValidGame(data) {
-      let allowed = ['id', 'parentId', 'checkpoints', 'createdAt', 'verificationMethod'];
-      return hasOnlyAllowedFields(data, allowed) &&
-             data.id is string && 
-             data.id.size() == 6 &&
+      return data.id is string && 
              data.parentId is string &&
              data.checkpoints is list &&
-             data.checkpoints.size() > 0 &&
-             data.checkpoints.size() < 50 &&
-             data.checkpoints.all(cp, isValidCheckpoint(cp)) &&
-             data.createdAt is number &&
-             math.abs(data.createdAt - request.time.toMillis()) < 86400000 &&
-             (!('verificationMethod' in data) || (data.verificationMethod in ['qr', 'passcode']));
+             data.createdAt is number;
     }
 
+    // Loose validation for sessions
     function isValidSession(data) {
-      let allowed = ['id', 'gameId', 'teamName', 'members', 'results', 'timestamp'];
-      return hasOnlyAllowedFields(data, allowed) &&
-             data.id is string &&
-             data.id.size() >= 10 && data.id.size() <= 50 &&
+      return data.id is string &&
              data.gameId is string &&
-             data.gameId.size() == 6 &&
-             data.teamName is string &&
-             data.teamName.size() > 0 &&
-             data.teamName.size() < 100 &&
-             data.members is list &&
-             data.members.size() < 20 &&
-             data.members.all(m, m is string && m.size() < 50) &&
-             data.results is list &&
-             data.results.size() < 50 &&
-             data.results.all(r, isValidResult(r)) &&
-             data.timestamp is number &&
-             math.abs(data.timestamp - request.time.toMillis()) < 86400000;
+             data.timestamp is number;
     }
 
     match /games/{gameId} {
-      // Anyone can get a specific game if they have the ID
+      // Anyone can read a game by ID
       allow get: if true;
       
-      // Only the owner can list their games or write to them
-      allow list: if isAuthenticated() && resource.data.parentId == request.auth.uid;
+      // Owner or Admin can list, create, update, delete
+      allow list: if isAuthenticated() && (resource.data.parentId == request.auth.uid || isAdmin());
       
       allow create: if isAuthenticated() && 
-                      request.resource.data.parentId == request.auth.uid &&
+                      (request.resource.data.parentId == request.auth.uid || isAdmin()) &&
                       isValidGame(request.resource.data);
                       
       allow update: if isAuthenticated() && 
-                      resource.data.parentId == request.auth.uid &&
-                      request.resource.data.parentId == request.auth.uid &&
+                      (resource.data.parentId == request.auth.uid || isAdmin()) &&
+                      (request.resource.data.parentId == request.auth.uid || isAdmin()) &&
                       isValidGame(request.resource.data);
                       
-      allow delete: if isAuthenticated() && resource.data.parentId == request.auth.uid;
+      allow delete: if isAuthenticated() && (resource.data.parentId == request.auth.uid || isAdmin());
     }
 
     match /sessions/{sessionId} {
       // Anyone can create a session (to save game results)
-      // But we validate the data and ensure it's linked to a valid game
-      allow create: if isValidSession(request.resource.data) && 
-                      exists(/databases/$(database)/documents/games/$(request.resource.data.gameId));
+      allow create: if isValidSession(request.resource.data);
       
-      // Only the game owner can read the sessions
-      allow read: if isAuthenticated() && 
-        get(/databases/$(database)/documents/games/$(resource.data.gameId)).data.parentId == request.auth.uid;
+      // Only the game owner or admin can read the sessions
+      // We use a get() to check the parent game's ownership
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        get(/databases/$(database)/documents/games/$(resource.data.gameId)).data.parentId == request.auth.uid
+      );
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
     }
   }
 }
