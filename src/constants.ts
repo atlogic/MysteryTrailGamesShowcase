@@ -121,17 +121,27 @@ export const TRANSLATIONS: Record<Language, any> = {
     helpStep1Desc: "Kliknij ikonę zębatki, aby się zalogować. Dzięki temu Twoje gry będą bezpiecznie zapisane w chmurze, a Ty zyskasz dostęp do historii rozgrywek i możliwość edycji tras z dowolnego urządzenia.",
     helpStep2: "Stwórz trasę i dodaj punkty",
     helpStep2Desc: "Dodawaj kolejne kroki przygody. Do każdego punktu możesz dołączyć zdjęcie podpowiadające lokalizację (np. zdjęcie drzewa), napisać zagadkę oraz wyznaczyć zadanie do wykonania.",
-    helpStep3: "Wydrukuj i ukryj kody QR",
-    helpStep3Desc: "Aplikacja wygeneruje unikalne kody QR dla każdego punktu. Wydrukuj je, wytnij i naklej na wielkanocne jajka lub ukryj w kopertach, zachowując kolejność zgodną z Twoją trasą.",
+    helpStep3: "Wybierz sposób weryfikacji",
+    helpStep3Desc: "Podczas tworzenia gry wybierz, czy dzieci mają skanować kody QR, czy wpisywać hasła. Jeśli nie masz drukarki, hasła są idealną alternatywą - możesz je napisać na jajkach lub karteczkach.",
     helpStep4: "Zadania i ocena starań",
     helpStep4Desc: "Dzieci mogą potwierdzać wykonanie zadań robiąc zdjęcie lub nagrywając swój śpiew. Możesz też włączyć opcję oceny – na koniec gry wybierzecie osobę, która najbardziej się starała, a aplikacja przyzna jej specjalne wyróżnienie!",
     helpStep5: "Udostępnij i graj!",
-    helpStep5Desc: "Gotową grę możesz udostępnić innym rodzicom za pomocą kodu QR lub linku. Dzieci skanują kody, rozwiązują zagadki i zdobywają punkty w drodze do skarbu!",
+    helpStep5Desc: "Gotową grę możesz udostępnić innym rodzicom za pomocą kodu QR lub linku. Dzieci skanują kody lub wpisują hasła, rozwiązują zagadki i zdobywają punkty w drodze do skarbu!",
     helpExampleTitle: "Przykład kroku:",
     helpExampleHint: "Zagadka: 'Rosnę w tym ogrodzie najdłużej, jestem największy i patrzę na wszystkich z góry. Przy moim korzeniu ktoś jajko ukrył – znajdź je, a powiem Ci co robić dalej!'",
     helpExampleTask: "Zadanie: 'Zaśpiewajcie wspólnie wesołą piosenkę o zajączku!'",
     createNewGame: "STWÓRZ NOWĄ GRĘ",
     close: "Zamknij",
+    passcode: "Hasło (zamiast QR)",
+    enterPasscode: "Wpisz hasło z jajka",
+    passcodePlaceholder: "np. KROK1",
+    wrongPasscode: "Błędne hasło! Spróbuj ponownie.",
+    orEnterPasscode: "lub wpisz hasło",
+    noPrinter: "Nie masz drukarki? Użyj haseł!",
+    verificationMethod: "Metoda weryfikacji",
+    qrMethod: "Kody QR (skanowanie)",
+    passcodeMethod: "Hasła (wpisywanie)",
+    methodWarning: "Zmiana metody usunie obecne ustawienia haseł!",
   },
   en: {
     title: "Easter Adventure",
@@ -253,17 +263,27 @@ export const TRANSLATIONS: Record<Language, any> = {
     helpStep1Desc: "Click the gear icon to log in. This keeps your games safely stored in the cloud, gives you access to game history, and lets you edit routes from any device.",
     helpStep2: "Create a route and add points",
     helpStep2Desc: "Add steps to the adventure. For each point, you can attach a photo hinting at the location (e.g., a photo of a tree), write a riddle, and set a task to perform.",
-    helpStep3: "Print and hide QR codes",
-    helpStep3Desc: "The app generates unique QR codes for each point. Print them, cut them out, and stick them on Easter eggs or hide them in envelopes, following the sequence of your route.",
+    helpStep3: "Choose verification method",
+    helpStep3Desc: "When creating a game, choose whether children should scan QR codes or enter passcodes. If you don't have a printer, passcodes are a perfect alternative - you can write them on eggs or notes.",
     helpStep4: "Tasks and effort evaluation",
     helpStep4Desc: "Children can confirm tasks by taking a photo or recording their singing. You can also enable the evaluation option – at the end of the game, you'll choose who tried hardest, and the app will give them a special mention!",
     helpStep5: "Share and play!",
-    helpStep5Desc: "You can share your finished game with other parents via QR code or link. Children scan codes, solve riddles, and earn points on their way to the treasure!",
+    helpStep5Desc: "You can share your finished game with other parents via QR code or link. Children scan codes or enter passcodes, solve riddles, and earn points on their way to the treasure!",
     helpExampleTitle: "Step Example:",
     helpExampleHint: "Riddle: 'I've been growing in this garden the longest, I'm the biggest and look down on everyone. Someone hid an egg at my root – find it, and I'll tell you what to do next!'",
     helpExampleTask: "Task: 'Sing a happy song about a bunny together!'",
     createNewGame: "CREATE NEW GAME",
     close: "Close",
+    passcode: "Passcode (instead of QR)",
+    enterPasscode: "Enter passcode from the egg",
+    passcodePlaceholder: "e.g. STEP1",
+    wrongPasscode: "Wrong passcode! Try again.",
+    orEnterPasscode: "or enter passcode",
+    noPrinter: "No printer? Use passcodes!",
+    verificationMethod: "Verification method",
+    qrMethod: "QR Codes (scanning)",
+    passcodeMethod: "Passcodes (typing)",
+    methodWarning: "Changing method will clear current passcode settings!",
   }
 };
 import { doc, setDoc, getDoc, collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
@@ -276,7 +296,8 @@ export const DEFAULT_CHECKPOINTS: Checkpoint[] = [
     hint: "Szukaj tam, gdzie liście szumią najgłośniej i dają najwięcej cienia.",
     task: "Zróbcie 5 pajacyków razem!",
     requirePhoto: false,
-    qrNumber: 1
+    qrNumber: 1,
+    passcode: "DRZEWO1"
   },
   {
     id: '2',
@@ -284,7 +305,8 @@ export const DEFAULT_CHECKPOINTS: Checkpoint[] = [
     hint: "Miejsce, gdzie można usiąść i odpocząć po długim biegu.",
     task: "Znajdźcie coś czerwonego i zróbcie temu zdjęcie!",
     requirePhoto: true,
-    qrNumber: 2
+    qrNumber: 2,
+    passcode: "LAWKA2"
   }
 ];
 
@@ -300,7 +322,7 @@ export const getParentId = () => {
   return auth.currentUser?.uid || null;
 };
 
-export const saveGameToFirebase = async (gameId: string, checkpoints: Checkpoint[]) => {
+export const saveGameToFirebase = async (gameId: string, checkpoints: Checkpoint[], verificationMethod: 'qr' | 'passcode' = 'qr') => {
   const path = `games/${gameId}`;
   try {
     const parentId = getParentId();
@@ -311,7 +333,8 @@ export const saveGameToFirebase = async (gameId: string, checkpoints: Checkpoint
       id: gameId,
       parentId,
       checkpoints,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      verificationMethod
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -345,13 +368,13 @@ export const loadUserGamesFromFirebase = async (): Promise<GameData[]> => {
   }
 };
 
-export const loadGameFromFirebase = async (gameId: string): Promise<Checkpoint[] | null> => {
+export const loadGameFromFirebase = async (gameId: string): Promise<GameData | null> => {
   const path = `games/${gameId}`;
   try {
     const gameRef = doc(db, 'games', gameId);
     const snap = await getDoc(gameRef);
     if (snap.exists()) {
-      return (snap.data() as GameData).checkpoints;
+      return snap.data() as GameData;
     }
     return null;
   } catch (error) {
@@ -378,12 +401,24 @@ export const loadSessionsFromFirebase = async (gameId: string): Promise<GameSess
       sessionsRef, 
       where('gameId', '==', gameId),
       orderBy('timestamp', 'desc'),
-      limit(5)
+      limit(10)
     );
     const snap = await getDocs(q);
     return snap.docs.map(doc => doc.data() as GameSession);
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
-    return [];
+    // Fallback if index is missing
+    try {
+      const sessionsRef = collection(db, 'sessions');
+      const q = query(
+        sessionsRef, 
+        where('gameId', '==', gameId),
+        limit(10)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(doc => doc.data() as GameSession).sort((a, b) => b.timestamp - a.timestamp);
+    } catch (innerError) {
+      handleFirestoreError(innerError, OperationType.LIST, path);
+      return [];
+    }
   }
 };

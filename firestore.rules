@@ -10,18 +10,52 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function hasOnlyAllowedFields(data, allowedFields) {
+      return data.keys().hasOnly(allowedFields);
+    }
+
+    function isValidCheckpoint(checkpoint) {
+      let allowed = ['id', 'name', 'hint', 'image', 'task', 'requirePhoto', 'requireAudio', 'requireEvaluation', 'qrNumber', 'passcode'];
+      return hasOnlyAllowedFields(checkpoint, allowed) &&
+             checkpoint.id is string &&
+             checkpoint.name is string && checkpoint.name.size() <= 100 &&
+             checkpoint.hint is string && checkpoint.hint.size() <= 1000 &&
+             checkpoint.task is string && checkpoint.task.size() <= 1000 &&
+             (!('image' in checkpoint) || (checkpoint.image is string && checkpoint.image.size() < 300000)) &&
+             (!('passcode' in checkpoint) || (checkpoint.passcode is string && checkpoint.passcode.size() <= 20)) &&
+             checkpoint.qrNumber is int &&
+             checkpoint.requirePhoto is bool;
+    }
+
+    function isValidResult(result) {
+      let allowed = ['checkpointId', 'photo', 'audio', 'bestPerformer'];
+      return hasOnlyAllowedFields(result, allowed) &&
+             result.checkpointId is string &&
+             (!('photo' in result) || (result.photo is string && result.photo.size() < 300000)) &&
+             (!('audio' in result) || (result.audio is string && result.audio.size() < 300000)) &&
+             (!('bestPerformer' in result) || (result.bestPerformer is string && result.bestPerformer.size() < 100));
+    }
+
     function isValidGame(data) {
-      return data.id is string && 
+      let allowed = ['id', 'parentId', 'checkpoints', 'createdAt', 'verificationMethod'];
+      return hasOnlyAllowedFields(data, allowed) &&
+             data.id is string && 
              data.id.size() == 6 &&
              data.parentId is string &&
              data.checkpoints is list &&
              data.checkpoints.size() > 0 &&
              data.checkpoints.size() < 50 &&
-             data.createdAt is number;
+             data.checkpoints.all(cp, isValidCheckpoint(cp)) &&
+             data.createdAt is number &&
+             math.abs(data.createdAt - request.time.toMillis()) < 60000 &&
+             (!('verificationMethod' in data) || (data.verificationMethod in ['qr', 'passcode']));
     }
 
     function isValidSession(data) {
-      return data.id is string &&
+      let allowed = ['id', 'gameId', 'teamName', 'members', 'results', 'timestamp'];
+      return hasOnlyAllowedFields(data, allowed) &&
+             data.id is string &&
+             data.id.size() >= 10 && data.id.size() <= 50 &&
              data.gameId is string &&
              data.gameId.size() == 6 &&
              data.teamName is string &&
@@ -29,9 +63,12 @@ service cloud.firestore {
              data.teamName.size() < 100 &&
              data.members is list &&
              data.members.size() < 20 &&
+             data.members.all(m, m is string && m.size() < 50) &&
              data.results is list &&
              data.results.size() < 50 &&
-             data.timestamp is number;
+             data.results.all(r, isValidResult(r)) &&
+             data.timestamp is number &&
+             math.abs(data.timestamp - request.time.toMillis()) < 60000;
     }
 
     match /games/{gameId} {

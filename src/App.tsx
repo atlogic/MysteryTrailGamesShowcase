@@ -54,6 +54,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [gameState, setGameState] = useState<GameState>('START');
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [verificationMethod, setVerificationMethod] = useState<'qr' | 'passcode'>('qr');
   const [gameId, setGameId] = useState<string>('');
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [showParentPanel, setShowParentPanel] = useState(false);
@@ -74,6 +75,7 @@ export default function App() {
   const [showShareQR, setShowShareQR] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [language, setLanguage] = useState<Language>('pl');
+  const [passcodeInput, setPasscodeInput] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -138,6 +140,11 @@ export default function App() {
       const newId = generateGameId();
       setGameId(newId);
       localStorage.setItem(GAME_ID_KEY, newId);
+    }
+
+    const savedMethod = localStorage.getItem('easter_egg_hunt_method');
+    if (savedMethod === 'qr' || savedMethod === 'passcode') {
+      setVerificationMethod(savedMethod);
     }
 
     // Check for game in URL
@@ -233,6 +240,17 @@ export default function App() {
     if (decodedText === expectedValue) {
       setGameState('TASK');
       speak(currentStage.task);
+    }
+  };
+
+  const handlePasscodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passcodeInput.toUpperCase() === currentStage.passcode?.toUpperCase()) {
+      setGameState('TASK');
+      speak(currentStage.task);
+      setPasscodeInput('');
+    } else {
+      alert(t.wrongPasscode);
     }
   };
 
@@ -345,12 +363,14 @@ export default function App() {
   const handleLoadGameById = async (id: string) => {
     setIsLoading(true);
     try {
-      const loadedCheckpoints = await loadGameFromFirebase(id.toUpperCase());
-      if (loadedCheckpoints) {
-        setCheckpoints(loadedCheckpoints);
+      const gameData = await loadGameFromFirebase(id.toUpperCase());
+      if (gameData) {
+        setCheckpoints(gameData.checkpoints);
+        setVerificationMethod(gameData.verificationMethod || 'qr');
         setGameId(id.toUpperCase());
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(loadedCheckpoints));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData.checkpoints));
         localStorage.setItem(GAME_ID_KEY, id.toUpperCase());
+        localStorage.setItem('easter_egg_hunt_method', gameData.verificationMethod || 'qr');
         return true;
       }
     } catch (error) {
@@ -378,7 +398,7 @@ export default function App() {
   const t = TRANSLATIONS[language];
 
   if (gameState === 'PRINT' && showParentPanel) {
-    return <PrintPage onBack={() => setGameState('START')} language={language} />;
+    return <PrintPage onBack={() => setGameState('START')} language={language} checkpoints={checkpoints} gameId={gameId} />;
   }
 
   return (
@@ -595,9 +615,19 @@ export default function App() {
 
               <button 
                 onClick={() => setGameState('SCANNING')}
-                className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white text-lg font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3"
+                className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 ${
+                  verificationMethod === 'passcode' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'
+                }`}
               >
-                <Camera size={24} /> {t.scanQR}
+                {verificationMethod === 'passcode' ? (
+                  <>
+                    <Lock size={24} /> {t.enterPasscode}
+                  </>
+                ) : (
+                  <>
+                    <Camera size={24} /> {t.scanQR}
+                  </>
+                )}
               </button>
             </motion.div>
           )}
@@ -611,15 +641,44 @@ export default function App() {
               className="space-y-6"
             >
               <div className="text-center mb-4">
-                <h3 className="text-xl font-bold text-green-800">{t.scanQR} #{currentStage.qrNumber}</h3>
-                <p className="text-gray-500">{t.qrInstructions}</p>
+                <h3 className="text-xl font-bold text-green-800">
+                  {verificationMethod === 'passcode' ? t.enterPasscode : t.scanQR} #{currentStage.qrNumber}
+                </h3>
+                <p className="text-gray-500">
+                  {verificationMethod === 'passcode' ? (language === 'pl' ? 'Wpisz hasło znalezione w tym miejscu.' : 'Enter the passcode found at this location.') : t.qrInstructions}
+                </p>
               </div>
               
-              <QRScanner 
-                onScan={handleQRScan} 
-                expectedValue={`egg_hunt_qr_${currentStage.qrNumber}`} 
-                language={language}
-              />
+              {verificationMethod === 'qr' ? (
+                <QRScanner 
+                  onScan={handleQRScan} 
+                  expectedValue={`egg_hunt_qr_${currentStage.qrNumber}`} 
+                  language={language}
+                />
+              ) : (
+                <div className="bg-white p-6 rounded-3xl shadow-lg border-2 border-yellow-100 space-y-4">
+                  <div className="flex items-center gap-2 text-yellow-600 mb-2">
+                    <Lock size={20} />
+                    <span className="font-black uppercase text-xs tracking-widest">{t.passcode}</span>
+                  </div>
+                  <form onSubmit={handlePasscodeSubmit} className="space-y-3">
+                    <input 
+                      type="text"
+                      value={passcodeInput}
+                      onChange={(e) => setPasscodeInput(e.target.value)}
+                      className="w-full p-4 bg-yellow-50 border-2 border-yellow-100 rounded-xl focus:border-yellow-500 outline-none font-black text-xl text-center uppercase"
+                      placeholder={t.passcodePlaceholder}
+                      autoFocus
+                    />
+                    <button 
+                      type="submit"
+                      className="w-full py-4 bg-yellow-500 hover:bg-yellow-600 text-white font-black rounded-xl shadow-md transition-all uppercase tracking-widest"
+                    >
+                      {t.enter}
+                    </button>
+                  </form>
+                </div>
+              )}
 
               <button 
                 onClick={() => setGameState('RIDDLE')}
@@ -904,9 +963,11 @@ export default function App() {
           checkpoints={checkpoints}
           gameId={gameId}
           language={language}
-          onUpdate={(newCp, newId) => {
+          verificationMethod={verificationMethod}
+          onUpdate={(newCp, newId, newMethod) => {
             setCheckpoints(newCp);
             setGameId(newId);
+            setVerificationMethod(newMethod);
           }}
           onPrint={() => setGameState('PRINT')}
           onClose={() => setShowParentPanel(false)}

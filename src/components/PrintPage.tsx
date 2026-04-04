@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, Printer } from 'lucide-react';
-import { Language } from '../types';
+import { ArrowLeft, Printer, Lock } from 'lucide-react';
+import { Language, Checkpoint } from '../types';
 import { TRANSLATIONS } from '../constants';
 
 interface PrintPageProps {
   onBack: () => void;
   language: Language;
+  checkpoints?: Checkpoint[];
+  gameId?: string;
 }
 
-export const PrintPage: React.FC<PrintPageProps> = ({ onBack, language }) => {
+export const PrintPage: React.FC<PrintPageProps> = ({ onBack, language, checkpoints, gameId }) => {
   const t = TRANSLATIONS[language];
   // Generate 30 numbered QR codes
   const qrCodes = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -36,6 +38,32 @@ export const PrintPage: React.FC<PrintPageProps> = ({ onBack, language }) => {
           <h1 className="text-3xl font-bold text-gray-800">{t.printTitle} (1-30)</h1>
           <p className="text-gray-600 mt-2">{t.printDesc}</p>
         </div>
+
+        {checkpoints && checkpoints.some(cp => cp.passcode) && (
+          <div className="mb-12 p-8 bg-yellow-50 rounded-3xl border-4 border-yellow-200 break-inside-avoid">
+            <h2 className="text-2xl font-black text-yellow-800 mb-4 flex items-center gap-2">
+              <Lock size={24} /> {t.noPrinter}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {checkpoints.map((cp, idx) => (
+                <div key={cp.id} className="bg-white p-4 rounded-xl border-2 border-yellow-100 flex justify-between items-center shadow-sm">
+                  <div>
+                    <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest block">KROK {idx + 1}</span>
+                    <span className="font-bold text-gray-800">{cp.name}</span>
+                  </div>
+                  <div className="bg-yellow-100 px-4 py-2 rounded-lg font-black text-yellow-900 text-xl tracking-widest border-2 border-yellow-200">
+                    {cp.passcode || '---'}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-sm text-yellow-700 font-medium italic">
+              {language === 'pl' 
+                ? 'Napisz te hasła na jajkach lub karteczkach i ukryj je zamiast kodów QR.'
+                : 'Write these passcodes on eggs or notes and hide them instead of QR codes.'}
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-6 print:gap-4">
           {qrCodes.map((num) => (

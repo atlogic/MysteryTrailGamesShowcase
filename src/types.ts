@@ -10,6 +10,7 @@ export interface Checkpoint {
   requireAudio?: boolean;
   requireEvaluation?: boolean;
   qrNumber: number; // 1-30
+  passcode?: string;
 }
 
 export interface CheckpointResult {
@@ -38,4 +39,5 @@ export interface GameData {
   parentId: string;
   checkpoints: Checkpoint[];
   createdAt: number;
+  verificationMethod?: 'qr' | 'passcode';
 }

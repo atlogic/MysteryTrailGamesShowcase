@@ -22,7 +22,8 @@ import {
   LogOut,
   Share2,
   Mail,
-  Lock
+  Lock,
+  QrCode
 } from 'lucide-react';
 import { loadSessionsFromFirebase, loadUserGamesFromFirebase, generateGameId, GAME_ID_KEY, TRANSLATIONS } from '../constants';
 import { GameSession, GameData, Language } from '../types';
@@ -42,15 +43,17 @@ interface ParentPanelProps {
   checkpoints: Checkpoint[];
   gameId: string;
   language: Language;
-  onUpdate: (newCheckpoints: Checkpoint[], newGameId: string) => void;
+  verificationMethod: 'qr' | 'passcode';
+  onUpdate: (newCheckpoints: Checkpoint[], newGameId: string, newMethod: 'qr' | 'passcode') => void;
   onPrint: () => void;
   onClose: () => void;
 }
 
-export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, language, onUpdate, onPrint, onClose }) => {
+export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, language, verificationMethod, onUpdate, onPrint, onClose }) => {
   const t = TRANSLATIONS[language];
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>(checkpoints);
+  const [localMethod, setLocalMethod] = useState<'qr' | 'passcode'>(verificationMethod);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'config' | 'history' | 'my-games'>('config');
@@ -59,6 +62,15 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isLoadingGames, setIsLoadingGames] = useState(false);
   const [selectedSession, setSelectedSession] = useState<GameSession | null>(null);
+
+  // Sync local state when props change (e.g. from startNewGame or selectGame)
+  useEffect(() => {
+    setLocalCheckpoints(checkpoints);
+  }, [checkpoints]);
+
+  useEffect(() => {
+    setLocalMethod(verificationMethod);
+  }, [verificationMethod]);
   
   // Auth state
   const [email, setEmail] = useState('');
@@ -121,8 +133,10 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
     if (confirm(t.confirmNewGame)) {
       const newId = generateGameId();
       setLocalCheckpoints([]);
-      onUpdate([], newId);
+      setLocalMethod('qr');
+      onUpdate([], newId, 'qr');
       localStorage.setItem(GAME_ID_KEY, newId);
+      localStorage.setItem('easter_egg_hunt_method', 'qr');
       setActiveTab('config');
     }
   };
@@ -142,7 +156,8 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
 
   const selectGame = (game: GameData) => {
     setLocalCheckpoints(game.checkpoints);
-    onUpdate(game.checkpoints, game.id);
+    setLocalMethod(game.verificationMethod || 'qr');
+    onUpdate(game.checkpoints, game.id, game.verificationMethod || 'qr');
     localStorage.setItem(GAME_ID_KEY, game.id);
     setActiveTab('config');
   };
@@ -254,9 +269,10 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
     
     setIsSaving(true);
     try {
-      await saveGameToFirebase(gameId, localCheckpoints);
+      await saveGameToFirebase(gameId, localCheckpoints, localMethod);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localCheckpoints));
-      onUpdate(localCheckpoints, gameId);
+      localStorage.setItem('easter_egg_hunt_method', localMethod);
+      onUpdate(localCheckpoints, gameId, localMethod);
       alert(t.savedSuccess + gameId);
       onClose();
     } catch (error: any) {
@@ -450,6 +466,42 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
                   </button>
                 )}
               </div>
+
+              {/* Verification Method Selection */}
+              <div className="bg-white p-4 rounded-2xl border-2 border-gray-100 mb-4">
+                <label className="block text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest">{t.verificationMethod}</label>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      if (localMethod === 'passcode' && localCheckpoints.some(cp => cp.passcode)) {
+                        if (confirm(t.methodWarning)) {
+                          setLocalMethod('qr');
+                          setLocalCheckpoints(localCheckpoints.map(cp => ({ ...cp, passcode: undefined })));
+                        }
+                      } else {
+                        setLocalMethod('qr');
+                      }
+                    }}
+                    className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 border-2 ${
+                      localMethod === 'qr' 
+                        ? 'bg-green-600 border-green-600 text-white shadow-md' 
+                        : 'bg-white border-gray-100 text-gray-400 hover:border-green-200'
+                    }`}
+                  >
+                    <QrCode size={16} /> {t.qrMethod}
+                  </button>
+                  <button 
+                    onClick={() => setLocalMethod('passcode')}
+                    className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 border-2 ${
+                      localMethod === 'passcode' 
+                        ? 'bg-yellow-500 border-yellow-500 text-white shadow-md' 
+                        : 'bg-white border-gray-100 text-gray-400 hover:border-yellow-200'
+                    }`}
+                  >
+                    <Lock size={16} /> {t.passcodeMethod}
+                  </button>
+                </div>
+              </div>
               {localCheckpoints.length === 0 && (
                 <div className="text-center py-8 text-gray-400">
                   <AlertCircle size={40} className="mx-auto mb-3 opacity-20" />
@@ -496,6 +548,18 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
                             placeholder={language === 'pl' ? 'Co muszą zrobić?' : 'What do they have to do?'}
                           />
                         </div>
+                        {localMethod === 'passcode' && (
+                          <div>
+                            <label className="block text-[9px] font-black text-gray-400 uppercase mb-0.5 ml-1">{t.passcode}</label>
+                            <input 
+                              type="text" 
+                              value={cp.passcode || ''}
+                              onChange={(e) => updateCheckpoint(cp.id, { passcode: e.target.value.toUpperCase() })}
+                              className="w-full p-2.5 text-sm font-bold rounded-lg border-2 border-gray-100 focus:border-yellow-500 focus:bg-white bg-gray-50 outline-none transition-all"
+                              placeholder={t.passcodePlaceholder}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 pt-1">
