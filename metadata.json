@@ -2,6 +2,7 @@
   "name": "Easter Game",
   "description": "Interaktywna gra terenowa dla dzieci typu escape room. Szukaj jajek, rozwiązuj zagadki i skanuj kody QR w ogrodzie.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "microphone"
   ]
 }

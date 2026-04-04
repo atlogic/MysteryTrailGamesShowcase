@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Checkpoint } from '../types';
 import { saveGameToFirebase, STORAGE_KEY } from '../constants';
 import { 
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 import { loadSessionsFromFirebase, loadUserGamesFromFirebase, generateGameId, GAME_ID_KEY, TRANSLATIONS } from '../constants';
 import { GameSession, GameData, Language } from '../types';
+import { Toast, ToastType, ConfirmModal } from './Toast';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -62,6 +64,18 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isLoadingGames, setIsLoadingGames] = useState(false);
   const [selectedSession, setSelectedSession] = useState<GameSession | null>(null);
+
+  // Toast and Confirm state
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [confirm, setConfirm] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ message, type });
+  };
+
+  const handleConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setConfirm({ title, message, onConfirm });
+  };
 
   // Sync local state when props change (e.g. from startNewGame or selectGame)
   useEffect(() => {
@@ -130,7 +144,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
   };
 
   const startNewGame = () => {
-    if (confirm(t.confirmNewGame)) {
+    handleConfirm(t.confirm, t.confirmNewGame, () => {
       const newId = generateGameId();
       setLocalCheckpoints([]);
       setLocalMethod('qr');
@@ -138,7 +152,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
       localStorage.setItem(GAME_ID_KEY, newId);
       localStorage.setItem('easter_egg_hunt_method', 'qr');
       setActiveTab('config');
-    }
+    });
   };
 
   const loadMyGames = async () => {
@@ -244,25 +258,25 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
         updateCheckpoint(id, { image: compressed });
       } catch (err) {
         console.error("Compression error:", err);
-        alert(t.errorProcessingImage);
+        showToast(t.errorProcessingImage, 'error');
       }
     }
   };
 
   const handleSave = async () => {
     if (localCheckpoints.length === 0) {
-      alert(t.addAtLeastOne);
+      showToast(t.addAtLeastOne, 'error');
       return;
     }
 
     // Basic validation for each checkpoint
     for (const cp of localCheckpoints) {
       if (!cp.name.trim() || !cp.hint.trim() || !cp.task.trim()) {
-        alert(language === 'pl' ? 'Wszystkie pola (nazwa, zagadka, zadanie) muszą być wypełnione!' : 'All fields (name, riddle, task) must be filled!');
+        showToast(language === 'pl' ? 'Wszystkie pola (nazwa, zagadka, zadanie) muszą być wypełnione!' : 'All fields (name, riddle, task) must be filled!', 'error');
         return;
       }
       if (cp.name.length > 100 || cp.hint.length > 1000 || cp.task.length > 1000) {
-        alert(language === 'pl' ? 'Niektóre pola są za długie!' : 'Some fields are too long!');
+        showToast(language === 'pl' ? 'Niektóre pola są za długie!' : 'Some fields are too long!', 'error');
         return;
       }
     }
@@ -274,7 +288,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
       localStorage.setItem('easter_egg_hunt_method', localMethod);
       localStorage.setItem(GAME_ID_KEY, savedId);
       onUpdate(localCheckpoints, savedId, localMethod);
-      alert(t.savedSuccess + savedId);
+      showToast(t.savedSuccess + savedId, 'success');
       onClose();
     } catch (error: any) {
       console.error("Save error:", error);
@@ -286,7 +300,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
       } else if (error.message && error.message.includes("permission")) {
         msg = language === 'pl' ? 'Brak uprawnień do zapisu! Zaloguj się ponownie.' : 'No write permissions! Please log in again.';
       }
-      alert(msg);
+      showToast(msg, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -475,10 +489,10 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
                   <button 
                     onClick={() => {
                       if (localMethod === 'passcode' && localCheckpoints.some(cp => cp.passcode)) {
-                        if (confirm(t.methodWarning)) {
+                        handleConfirm(t.confirm, t.methodWarning, () => {
                           setLocalMethod('qr');
                           setLocalCheckpoints(localCheckpoints.map(cp => ({ ...cp, passcode: undefined })));
-                        }
+                        });
                       } else {
                         setLocalMethod('qr');
                       }
@@ -865,6 +879,30 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
           </div>
         )}
       </div>
+
+      {/* Toast and Confirm */}
+      <AnimatePresence>
+        {toast && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast(null)} 
+          />
+        )}
+      </AnimatePresence>
+
+      <ConfirmModal 
+        isOpen={!!confirm}
+        title={confirm?.title || ''}
+        message={confirm?.message || ''}
+        onConfirm={() => {
+          confirm?.onConfirm();
+          setConfirm(null);
+        }}
+        onCancel={() => setConfirm(null)}
+        confirmText={t.confirm}
+        cancelText={t.cancel}
+      />
     </div>
   );
 };

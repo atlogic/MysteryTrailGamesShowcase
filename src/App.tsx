@@ -44,6 +44,7 @@ import {
   TRANSLATIONS
 } from './constants';
 import { Checkpoint, TeamInfo, GameSession, CheckpointResult, Language } from './types';
+import { Toast, ToastType, ConfirmModal } from './components/Toast';
 
 import { auth } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -74,6 +75,18 @@ export default function App() {
   const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
   const [showShareQR, setShowShareQR] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Toast and Confirm state
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [confirm, setConfirm] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ message, type });
+  };
+
+  const handleConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setConfirm({ title, message, onConfirm });
+  };
   const [language, setLanguage] = useState<Language>('pl');
   const [passcodeInput, setPasscodeInput] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -115,7 +128,7 @@ export default function App() {
       let msg = t.errorMic;
       if (err.name === 'NotAllowedError') msg = t.errorMicPermission;
       if (err.name === 'NotFoundError') msg = t.errorMicNotFound;
-      alert(msg);
+      showToast(msg, 'error');
     }
   };
 
@@ -171,7 +184,7 @@ export default function App() {
 
   const handleStart = () => {
     if (checkpoints.length === 0) {
-      alert(t.addPointsFirst);
+      showToast(t.addPointsFirst, 'error');
       return;
     }
     setGameState('TEAM_SETUP');
@@ -180,11 +193,11 @@ export default function App() {
   const handleTeamSubmit = () => {
     const validMembers = teamInfo.members.filter(m => m.trim() !== '');
     if (validMembers.length < 1) {
-      alert(t.addOneName);
+      showToast(t.addOneName, 'error');
       return;
     }
     if (!teamInfo.name.trim()) {
-      alert(t.enterTeamName);
+      showToast(t.enterTeamName, 'error');
       return;
     }
     setTeamInfo({ ...teamInfo, members: validMembers });
@@ -250,7 +263,7 @@ export default function App() {
       speak(currentStage.task);
       setPasscodeInput('');
     } else {
-      alert(t.wrongPasscode);
+      showToast(t.wrongPasscode, 'error');
     }
   };
 
@@ -323,7 +336,7 @@ export default function App() {
 
   const handleEvaluationSubmit = () => {
     if (!bestPerformer) {
-      alert(t.chooseBest);
+      showToast(t.chooseBest, 'error');
       return;
     }
     setVotes(prev => ({
@@ -389,9 +402,9 @@ export default function App() {
     if (success) {
       setShowLoadPrompt(false);
       setLoadId('');
-      alert(t.loadSuccess);
+      showToast(t.loadSuccess, 'success');
     } else {
-      alert(t.errorLoad);
+      showToast(t.errorLoad, 'error');
     }
   };
 
@@ -788,11 +801,11 @@ export default function App() {
               <button 
                 onClick={() => {
                   if (currentStage.requirePhoto && !capturedPhoto) {
-                    alert(t.errorPhoto);
+                    showToast(t.errorPhoto, 'error');
                     return;
                   }
                   if (currentStage.requireAudio && !recordedAudio) {
-                    alert(t.errorMic);
+                    showToast(t.errorMic, 'error');
                     return;
                   }
                   if (currentStage.requireEvaluation) {
@@ -1114,6 +1127,29 @@ export default function App() {
           </motion.div>
         </div>
       )}
+      {/* Toast and Confirm */}
+      <AnimatePresence>
+        {toast && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast(null)} 
+          />
+        )}
+      </AnimatePresence>
+
+      <ConfirmModal 
+        isOpen={!!confirm}
+        title={confirm?.title || ''}
+        message={confirm?.message || ''}
+        onConfirm={() => {
+          confirm?.onConfirm();
+          setConfirm(null);
+        }}
+        onCancel={() => setConfirm(null)}
+        confirmText={t.confirm}
+        cancelText={t.cancel}
+      />
     </div>
   );
 }
