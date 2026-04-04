@@ -322,22 +322,37 @@ export const getParentId = () => {
   return auth.currentUser?.uid || null;
 };
 
-export const saveGameToFirebase = async (gameId: string, checkpoints: Checkpoint[], verificationMethod: 'qr' | 'passcode' = 'qr') => {
+export const saveGameToFirebase = async (gameId: string, checkpoints: Checkpoint[], verificationMethod: 'qr' | 'passcode' = 'qr'): Promise<string> => {
   const path = `games/${gameId}`;
   try {
     const parentId = getParentId();
     if (!parentId) throw new Error("User not authenticated");
     
+    // Check if game exists and who owns it
     const gameRef = doc(db, 'games', gameId);
-    await setDoc(gameRef, {
-      id: gameId,
+    const snap = await getDoc(gameRef);
+    
+    let targetId = gameId;
+    if (snap.exists()) {
+      const existingData = snap.data() as GameData;
+      if (existingData.parentId !== parentId) {
+        // User is not the owner, generate a new ID (Remix/Copy)
+        targetId = generateGameId();
+      }
+    }
+    
+    const finalRef = doc(db, 'games', targetId);
+    await setDoc(finalRef, {
+      id: targetId,
       parentId,
       checkpoints,
       createdAt: Date.now(),
       verificationMethod
     });
+    return targetId;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+    return gameId;
   }
 };
 

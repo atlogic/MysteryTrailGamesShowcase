@@ -21,10 +21,12 @@ service cloud.firestore {
              checkpoint.name is string && checkpoint.name.size() <= 100 &&
              checkpoint.hint is string && checkpoint.hint.size() <= 1000 &&
              checkpoint.task is string && checkpoint.task.size() <= 1000 &&
-             (!('image' in checkpoint) || (checkpoint.image is string && checkpoint.image.size() < 300000)) &&
-             (!('passcode' in checkpoint) || (checkpoint.passcode is string && checkpoint.passcode.size() <= 20)) &&
+             (!('image' in checkpoint) || (checkpoint.image is string && checkpoint.image.size() < 500000)) &&
+             (!('passcode' in checkpoint) || (checkpoint.passcode is string && checkpoint.passcode.size() <= 50)) &&
              checkpoint.qrNumber is int &&
-             checkpoint.requirePhoto is bool;
+             checkpoint.requirePhoto is bool &&
+             (!('requireAudio' in checkpoint) || checkpoint.requireAudio is bool) &&
+             (!('requireEvaluation' in checkpoint) || checkpoint.requireEvaluation is bool);
     }
 
     function isValidResult(result) {
@@ -47,7 +49,7 @@ service cloud.firestore {
              data.checkpoints.size() < 50 &&
              data.checkpoints.all(cp, isValidCheckpoint(cp)) &&
              data.createdAt is number &&
-             math.abs(data.createdAt - request.time.toMillis()) < 60000 &&
+             math.abs(data.createdAt - request.time.toMillis()) < 3600000 &&
              (!('verificationMethod' in data) || (data.verificationMethod in ['qr', 'passcode']));
     }
 

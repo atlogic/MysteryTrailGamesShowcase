@@ -269,11 +269,12 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
     
     setIsSaving(true);
     try {
-      await saveGameToFirebase(gameId, localCheckpoints, localMethod);
+      const savedId = await saveGameToFirebase(gameId, localCheckpoints, localMethod);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localCheckpoints));
       localStorage.setItem('easter_egg_hunt_method', localMethod);
-      onUpdate(localCheckpoints, gameId, localMethod);
-      alert(t.savedSuccess + gameId);
+      localStorage.setItem(GAME_ID_KEY, savedId);
+      onUpdate(localCheckpoints, savedId, localMethod);
+      alert(t.savedSuccess + savedId);
       onClose();
     } catch (error: any) {
       console.error("Save error:", error);
