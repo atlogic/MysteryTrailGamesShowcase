@@ -1,49 +1,86 @@
-# Easter Egg Hunt 🥚
+# Mystery Trail
 
-An epic outdoor game for children, youth, and adults. Hide eggs, create adventures, and make your children have great fun during the holidays!
+Create your own real-world mystery game in minutes.
 
-## Features
-- Create custom routes with riddles and tasks.
-- Generate and print unique QR codes for each checkpoint.
-- Real-time game progress tracking.
-- Photo and audio task confirmation.
-- Multi-language support (Polish, English).
-- Parent panel for game management and history.
+`Mystery Trail` is a mobile-first scavenger hunt builder for families, creators, teachers, and event organizers. Build a route, hide clues, use QR codes, passcodes, or GPS checkpoints, and turn any place into an interactive adventure.
 
-## Security Notice
-This repository is configured to use environment variables for sensitive information. **Never commit your `.env` file or Firebase configuration files to version control.**
+Planned live demo: `https://mysterytrailgames.atlogic.eu/`
 
-## Setup
+## Why It Stands Out
 
-### 1. Firebase Configuration
-You need a Firebase project with:
-- **Firestore Database**
-- **Firebase Authentication** (Google Sign-in and Email/Password enabled)
+- It is not just a holiday mini-game. It is a reusable game engine for real-world adventures.
+- It works for birthdays, classrooms, team challenges, family events, city walks, and creative treasure hunts.
+- It supports multiple verification styles: QR, passcodes, and GPS.
+- It mixes digital game flow with physical movement, clues, and tasks.
 
-### 2. Environment Variables
-Create a `.env` file in the root directory based on `.env.example`:
+## What You Can Build
 
-```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_FIRESTORE_DATABASE_ID=(default)
-```
+- Custom mystery routes with multiple steps
+- Riddles, hidden hints, and extra hint penalties
+- QR checkpoints
+- Passcode-based checkpoints for no-printer scenarios
+- GPS-based checkpoints with distance validation
+- Time limits and extra time windows
+- Photo tasks, audio tasks, and end-of-game evaluation
+- Polish and English game flows
 
-### 3. Firestore Rules
-Deploy the rules from `firestore.rules` to your Firebase project.
+## How It Works
 
-### 4. Installation
+1. Create a game route in the creator panel.
+2. Choose how players unlock each step: QR, passcode, or GPS.
+3. Add riddles, tasks, optional hints, and scoring rules.
+4. Share the game code or link.
+5. Let players explore, solve, and reach the final goal.
+
+## Great For
+
+- Family adventures
+- Birthday mystery games
+- Outdoor events
+- Schools and workshops
+- Interactive city or park trails
+- Makers building playful real-world experiences
+
+## Tech Stack
+
+- React
+- TypeScript
+- Vite
+- Firebase Auth
+- Firestore
+- QR scanning
+- GPS checkpoint validation
+- Cloudflare Pages
+
+## Local Development
+
 ```bash
 npm install
 npm run dev
 ```
 
-## Deployment
-This app is ready to be deployed to Cloudflare Pages or any other static site hosting. Ensure you set the environment variables in your hosting provider's dashboard.
+## Firebase Setup
+
+If you want to run your own copy, create your own Firebase project and configure:
+
+- Firestore Database
+- Firebase Authentication
+- Firestore security rules from `firestore.rules`
+
+This repository uses a public client-side Firebase config, which is normal for Firebase web apps. Access control is enforced by Firebase security rules.
+
+## Security Notes
+
+- Local env files are ignored in git to avoid accidental commits.
+- Firebase access is enforced by server-side rules.
+- This repository is prepared as a public demo / showcase version, not as a high-risk enterprise platform.
+
+## Why This Repo Exists
+
+I wanted to build a flexible adventure game creator that can go beyond Easter and become a reusable mystery trail platform for many kinds of events.
+
+If this project inspires your own game, event, or real-world interactive experience, consider starring the repo.
 
 ## License
+
 MIT
