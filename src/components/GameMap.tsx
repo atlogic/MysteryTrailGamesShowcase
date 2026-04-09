@@ -14,13 +14,13 @@ const DefaultIcon = L.icon({
 
 const PlayerIcon = L.divIcon({
   className: 'player-marker',
-  html: `<div class="w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg animate-pulse"></div>`,
+  html: `<div class="w-4 h-4 bg-purple-600 rounded-full border-2 border-white shadow-lg animate-pulse"></div>`,
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });
 
 const TargetIcon = L.icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -71,7 +71,7 @@ export const GameMap: React.FC<GameMapProps> = ({
   ];
 
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden shadow-inner border-2 border-blue-100">
+    <div className="w-full h-full rounded-2xl overflow-hidden shadow-inner border-2 border-purple-100">
       <MapContainer 
         center={center} 
         zoom={16} 
@@ -98,13 +98,13 @@ export const GameMap: React.FC<GameMapProps> = ({
           <>
             <Marker position={[targetCheckpoint.lat, targetCheckpoint.lng]} icon={TargetIcon}>
               <Popup>
-                <div className="font-bold text-green-600">{targetCheckpoint.name}</div>
+                <div className="font-bold text-red-600">{targetCheckpoint.name}</div>
               </Popup>
             </Marker>
             <Circle 
               center={[targetCheckpoint.lat, targetCheckpoint.lng]} 
               radius={threshold} 
-              pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.2 }} 
+              pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.2 }} 
             />
           </>
         )}
@@ -117,7 +117,7 @@ export const GameMap: React.FC<GameMapProps> = ({
         {/* Path */}
         <Polyline 
           positions={pathPoints} 
-          pathOptions={{ color: '#3b82f6', weight: 3, dashArray: '10, 10', opacity: 0.6 }} 
+          pathOptions={{ color: '#9333ea', weight: 3, dashArray: '10, 10', opacity: 0.6 }} 
         />
       </MapContainer>
     </div>

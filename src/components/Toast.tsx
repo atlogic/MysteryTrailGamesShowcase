@@ -20,15 +20,15 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration =
   }, [onClose, duration]);
 
   const icons = {
-    success: <CheckCircle2 className="text-green-500" size={20} />,
+    success: <CheckCircle2 className="text-red-500" size={20} />,
     error: <AlertCircle className="text-red-500" size={20} />,
-    info: <Info className="text-blue-500" size={20} />,
+    info: <Info className="text-purple-500" size={20} />,
   };
 
   const bgColors = {
-    success: 'bg-green-50 border-green-200',
+    success: 'bg-red-50 border-red-200',
     error: 'bg-red-50 border-red-200',
-    info: 'bg-blue-50 border-blue-200',
+    info: 'bg-purple-50 border-purple-200',
   };
 
   return (
@@ -76,8 +76,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden"
       >
         <div className="p-6 text-center">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="text-yellow-600" size={32} />
+          <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="text-cyan-600" size={32} />
           </div>
           <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">{title}</h3>
           <p className="text-gray-600 font-medium">{message}</p>

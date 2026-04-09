@@ -51,10 +51,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, expectedValue, lan
   }, [onScan, expectedValue]);
 
   return (
-    <div className="w-full max-w-md mx-auto overflow-hidden rounded-2xl border-4 border-yellow-400 bg-white shadow-xl">
+    <div className="w-full max-w-md mx-auto overflow-hidden rounded-2xl border-4 border-cyan-400 bg-white shadow-xl">
       <div id="reader" className="w-full"></div>
-      <div className="p-4 text-center bg-yellow-50">
-        <p className="text-sm font-medium text-yellow-800">
+      <div className="p-4 text-center bg-cyan-50">
+        <p className="text-sm font-medium text-cyan-800">
           {t.scannerHint}
         </p>
       </div>

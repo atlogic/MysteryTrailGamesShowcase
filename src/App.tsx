@@ -506,30 +506,30 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-blue-50 font-sans text-gray-800 p-4 md:p-8 flex flex-col items-center">
+    <div className="min-h-screen bg-slate-950 font-sans text-slate-200 p-4 md:p-8 flex flex-col items-center">
       {/* Header */}
       <header className="w-full max-w-2xl flex justify-between items-center mb-8">
         <div className="flex items-center gap-2">
-          <div className="bg-yellow-400 p-2 rounded-full shadow-md">
-            <Archive className="text-white" size={24} />
+          <div className="bg-amber-400 p-2 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.4)]">
+            <Archive className="text-slate-950" size={24} />
           </div>
-          <h1 className="text-lg sm:text-xl font-bold text-green-800 truncate max-w-[150px] sm:max-w-none">
+          <h1 className="text-lg sm:text-xl font-serif font-bold text-amber-400 tracking-tight truncate max-w-[150px] sm:max-w-none uppercase">
             {t.title}
           </h1>
         </div>
         
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Language Switcher */}
-          <div className="flex bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+          <div className="flex bg-slate-900 rounded-lg border border-slate-800 p-1 shadow-inner">
             <button 
               onClick={() => setLanguage('pl')}
-              className={`px-2 py-1 text-[10px] font-bold rounded ${language === 'pl' ? 'bg-green-600 text-white' : 'text-gray-400'}`}
+              className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${language === 'pl' ? 'bg-amber-400 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
             >
               PL
             </button>
             <button 
               onClick={() => setLanguage('en')}
-              className={`px-2 py-1 text-[10px] font-bold rounded ${language === 'en' ? 'bg-green-600 text-white' : 'text-gray-400'}`}
+              className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${language === 'en' ? 'bg-amber-400 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}
             >
               EN
             </button>
@@ -538,20 +538,20 @@ export default function App() {
           {gameState !== 'FINISHED' && (
             <div className="flex items-center gap-2 sm:gap-4">
               {checkpoints.length > 0 && gameState !== 'START' && (
-                <div className="bg-white px-3 sm:px-4 py-1 rounded-full shadow-sm border border-green-100 flex items-center gap-2">
-                  <Users size={14} className="text-green-600 sm:size-4" />
-                  <span className="text-xs sm:text-sm font-bold text-green-700">{currentStageIndex + 1}/{checkpoints.length}</span>
+                <div className="bg-slate-900 px-3 sm:px-4 py-1 rounded-full shadow-inner border border-slate-800 flex items-center gap-2">
+                  <Users size={14} className="text-amber-400 sm:size-4" />
+                  <span className="text-xs sm:text-sm font-bold text-amber-400">{currentStageIndex + 1}/{checkpoints.length}</span>
                 </div>
               )}
               <button 
                 onClick={() => setShowHelp(true)}
-                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                className="p-2 text-slate-400 hover:text-cyan-400 transition-colors"
               >
                 <HelpCircle size={20} />
               </button>
               <button 
                 onClick={() => setShowParentPanel(true)}
-                className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                className="p-2 text-slate-400 hover:text-amber-400 transition-colors"
               >
                 <Settings size={20} />
               </button>
@@ -568,12 +568,15 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-white p-8 rounded-3xl shadow-2xl text-center space-y-6 border-b-8 border-green-200 relative"
+              className="bg-slate-900 p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-center space-y-6 border border-slate-800 relative overflow-hidden"
             >
+              {/* Decorative gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 to-transparent pointer-events-none"></div>
+
               {/* Small QR Code in top right */}
               <button 
                 onClick={() => setShowShareQR(true)}
-                className="absolute top-4 right-4 p-2 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-all shadow-sm group"
+                className="absolute top-4 right-4 p-2 bg-slate-800 rounded-xl border border-slate-700 hover:bg-slate-700 transition-all shadow-lg group z-10"
                 title="Udostępnij grę"
               >
                 <div className="relative">
@@ -581,38 +584,40 @@ export default function App() {
                     value={`${window.location.origin}${window.location.pathname}?game=${gameId}`} 
                     size={32}
                     level="L"
+                    bgColor="#1e293b"
+                    fgColor="#fbbf24"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-sm">
-                    <Share2 size={16} className="text-green-600" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-sm">
+                    <Share2 size={16} className="text-amber-400" />
                   </div>
                 </div>
               </button>
 
               <div className="relative inline-block">
                 <motion.div animate={{ rotate: [0, 10, -10, 0], y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
-                  <Archive size={80} className="text-yellow-600 mx-auto" />
+                  <Archive size={80} className="text-amber-400 mx-auto drop-shadow-[0_0_15px_rgba(251,191,36,0.3)]" />
                 </motion.div>
               </div>
               
-              <h2 className="text-3xl font-extrabold text-green-900">{t.title}!</h2>
-              <p className="text-sm text-green-700 font-medium mt-1 mb-4 leading-relaxed">
+              <h2 className="text-4xl font-serif font-black text-amber-400 uppercase tracking-tighter">{t.title}</h2>
+              <p className="text-sm text-slate-400 font-medium mt-1 mb-4 leading-relaxed max-w-xs mx-auto">
                 {t.subtitle}
               </p>
-              <p className="text-lg text-gray-600">
+              <p className="text-lg text-slate-300 font-light">
                 {checkpoints.length > 0 ? t.welcome : t.firstGame}
               </p>
               
               {checkpoints.length > 0 ? (
                 <button 
                   onClick={handleStart}
-                  className="w-full py-4 bg-green-500 hover:bg-green-600 text-white text-xl font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3"
+                  className="w-full py-4 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xl font-black rounded-2xl shadow-[0_10px_20px_rgba(251,191,36,0.2)] transition-all flex items-center justify-center gap-3 uppercase tracking-widest"
                 >
                   {t.start} <ArrowRight />
                 </button>
               ) : (
                 <button 
                   onClick={() => setShowParentPanel(true)}
-                  className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3"
+                  className="w-full py-4 bg-slate-300 hover:bg-slate-400 text-slate-950 text-xl font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 uppercase tracking-widest"
                 >
                   {t.createNewGame} <Plus />
                 </button>
@@ -621,7 +626,7 @@ export default function App() {
               <div className="grid grid-cols-1 gap-3 pt-4">
                 <button 
                   onClick={() => setShowLoadPrompt(true)}
-                  className="py-3 bg-blue-50 text-blue-600 font-bold rounded-xl flex items-center justify-center gap-2 text-sm"
+                  className="py-3 bg-slate-800 text-slate-300 hover:text-amber-400 font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-colors border border-slate-700"
                 >
                   <Download size={18} /> {t.downloadGame}
                 </button>
@@ -635,14 +640,14 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white p-8 rounded-3xl shadow-2xl space-y-6 border-b-8 border-blue-200"
+              className="bg-slate-900 p-8 rounded-3xl shadow-2xl space-y-6 border border-slate-800"
             >
               <div className="text-center space-y-2">
-                <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                  <UserPlus className="text-blue-600" size={32} />
+                <div className="bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto border border-slate-700">
+                  <UserPlus className="text-amber-400" size={32} />
                 </div>
-                <h2 className="text-2xl font-black text-blue-900 uppercase">{t.teamSetup}</h2>
-                <p className="text-gray-500">{t.teamMembers}</p>
+                <h2 className="text-2xl font-serif font-black text-amber-400 uppercase tracking-tight">{t.teamSetup}</h2>
+                <p className="text-slate-400">{t.teamMembers}</p>
               </div>
 
               <div className="space-y-4 max-h-[40vh] overflow-y-auto p-2">
@@ -652,11 +657,11 @@ export default function App() {
                       type="text"
                       value={member}
                       onChange={(e) => updateMember(index, e.target.value)}
-                      className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-blue-400 outline-none font-bold text-lg"
+                      className="w-full p-4 bg-slate-800 border-2 border-slate-700 rounded-xl focus:border-amber-400 outline-none font-bold text-lg text-slate-100 transition-all shadow-inner"
                       placeholder={t.memberName + ` ${index + 1}...`}
                     />
                     {member.trim() !== '' && (
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500">
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-400">
                         <Check size={20} />
                       </div>
                     )}
@@ -666,19 +671,19 @@ export default function App() {
 
               <div className="pt-4 space-y-4">
                 <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase mb-1 ml-1">{t.teamName}</label>
+                  <label className="block text-xs font-black text-slate-500 uppercase mb-1 ml-1 tracking-widest">{t.teamName}</label>
                   <input 
                     type="text"
                     value={teamInfo.name}
                     onChange={(e) => setTeamInfo({ ...teamInfo, name: e.target.value })}
-                    className="w-full p-4 bg-blue-50 border-2 border-blue-100 rounded-xl focus:border-blue-500 outline-none font-black text-xl text-blue-900 text-center"
+                    className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-xl focus:border-amber-400 outline-none font-black text-xl text-amber-400 text-center uppercase tracking-widest shadow-inner"
                     placeholder="np. SZYBKIE WILKI"
                   />
                 </div>
 
                 <button 
                   onClick={handleTeamSubmit}
-                  className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl hover:bg-blue-700 transition-all uppercase tracking-widest"
+                  className="w-full py-4 bg-amber-400 text-slate-950 font-black rounded-2xl shadow-xl hover:bg-amber-500 transition-all uppercase tracking-widest"
                 >
                   {t.start}
                 </button>
@@ -692,37 +697,37 @@ export default function App() {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
-              className="bg-white p-8 rounded-3xl shadow-xl space-y-6 border-b-8 border-blue-200"
+              className="bg-slate-900 p-8 rounded-3xl shadow-xl space-y-6 border border-slate-800"
             >
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3 text-blue-600">
+                <div className="flex items-center gap-3 text-amber-400">
                   <HelpCircle size={28} />
                   <span className="font-bold tracking-widest uppercase text-sm">{t.riddle} #{currentStageIndex + 1}</span>
                 </div>
                 <button 
                   onClick={() => speak(currentStage.hint)}
-                  className="p-3 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
+                  className="p-3 bg-slate-800 text-amber-400 rounded-full hover:bg-slate-700 transition-colors border border-slate-700"
                 >
                   <Volume2 size={24} />
                 </button>
               </div>
               
-              <h3 className="text-2xl font-bold text-gray-800 leading-tight">
+              <h3 className="text-2xl font-serif font-bold text-slate-100 leading-tight">
                 {currentStage.hint}
               </h3>
 
               {currentStage.image && (
-                <div className="rounded-2xl overflow-hidden border-4 border-blue-50 shadow-inner">
+                <div className="rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl">
                   <img src={currentStage.image} alt="Hint" className="w-full h-48 object-cover" />
                 </div>
               )}
 
               <button 
                 onClick={() => setGameState('SCANNING')}
-                className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 ${
-                  verificationMethod === 'passcode' ? 'bg-yellow-500 hover:bg-yellow-600' : 
-                  verificationMethod === 'gps' ? 'bg-blue-600 hover:bg-blue-700' :
-                  'bg-blue-500 hover:bg-blue-600'
+                className={`w-full py-4 text-slate-950 text-lg font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 uppercase tracking-widest ${
+                  verificationMethod === 'passcode' ? 'bg-cyan-400 hover:bg-cyan-500' : 
+                  verificationMethod === 'gps' ? 'bg-amber-400 hover:bg-amber-500' :
+                  'bg-amber-400 hover:bg-amber-500'
                 }`}
               >
                 {verificationMethod === 'passcode' ? (
@@ -751,12 +756,12 @@ export default function App() {
               className="space-y-6"
             >
               <div className="text-center mb-4">
-                <h3 className="text-xl font-bold text-green-800">
+                <h3 className="text-xl font-serif font-black text-amber-400 uppercase tracking-tight">
                   {verificationMethod === 'passcode' ? t.enterPasscode : 
                    verificationMethod === 'gps' ? t.gpsMethod :
                    t.scanQR} #{currentStage.qrNumber}
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-slate-400">
                   {verificationMethod === 'passcode' ? (language === 'pl' ? 'Wpisz hasło znalezione w tym miejscu.' : 'Enter the passcode found at this location.') : 
                    verificationMethod === 'gps' ? t.gpsHint :
                    t.qrInstructions}
@@ -770,8 +775,8 @@ export default function App() {
                   language={language}
                 />
               ) : verificationMethod === 'passcode' ? (
-                <div className="bg-white p-6 rounded-3xl shadow-lg border-2 border-yellow-100 space-y-4">
-                  <div className="flex items-center gap-2 text-yellow-600 mb-2">
+                <div className="bg-slate-900 p-6 rounded-3xl shadow-2xl border border-slate-800 space-y-4">
+                  <div className="flex items-center gap-2 text-cyan-400 mb-2">
                     <Lock size={20} />
                     <span className="font-black uppercase text-xs tracking-widest">{t.passcode}</span>
                   </div>
@@ -780,32 +785,32 @@ export default function App() {
                       type="text"
                       value={passcodeInput}
                       onChange={(e) => setPasscodeInput(e.target.value)}
-                      className="w-full p-4 bg-yellow-50 border-2 border-yellow-100 rounded-xl focus:border-yellow-500 outline-none font-black text-xl text-center uppercase"
+                      className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-xl focus:border-cyan-400 outline-none font-black text-xl text-center uppercase text-cyan-400 transition-all shadow-inner"
                       placeholder={t.passcodePlaceholder}
                       autoFocus
                     />
                     <button 
                       type="submit"
-                      className="w-full py-4 bg-yellow-500 hover:bg-yellow-600 text-white font-black rounded-xl shadow-md transition-all uppercase tracking-widest"
+                      className="w-full py-4 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black rounded-xl shadow-md transition-all uppercase tracking-widest"
                     >
                       {t.enter}
                     </button>
                   </form>
                 </div>
               ) : (
-                <div className="bg-white p-4 sm:p-6 rounded-3xl shadow-lg border-2 border-blue-100 text-center space-y-4 sm:space-y-6 overflow-hidden">
+                <div className="bg-slate-900 p-4 sm:p-6 rounded-3xl shadow-2xl border border-slate-800 text-center space-y-4 sm:space-y-6 overflow-hidden">
                   {gpsViewMode === 'radar' ? (
                     <div className="space-y-6 py-4">
                       <div className="relative w-32 h-32 mx-auto">
-                        <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-20"></div>
-                        <div className="relative z-10 w-full h-full bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg">
+                        <div className="absolute inset-0 bg-amber-400/20 rounded-full animate-ping opacity-20"></div>
+                        <div className="relative z-10 w-full h-full bg-amber-400 rounded-full flex items-center justify-center text-slate-950 shadow-lg">
                           <MapPin size={48} className="animate-bounce" />
                         </div>
                       </div>
                       
                       <div className="space-y-2">
-                        <p className="text-sm font-black text-blue-400 uppercase tracking-widest">{t.distanceToTarget}</p>
-                        <div className="text-4xl font-black text-blue-900">
+                        <p className="text-sm font-black text-amber-400 uppercase tracking-widest">{t.distanceToTarget}</p>
+                        <div className="text-4xl font-black text-amber-400">
                           {userLocation && currentStage.lat !== undefined && currentStage.lng !== undefined ? (
                             <>
                               {Math.round(calculateDistance(userLocation.lat, userLocation.lng, currentStage.lat, currentStage.lng))}
@@ -813,7 +818,7 @@ export default function App() {
                             </>
                           ) : (
                             <div className="flex justify-center">
-                              <Loader2 className="animate-spin text-blue-200" size={32} />
+                              <Loader2 className="animate-spin text-slate-700" size={32} />
                             </div>
                           )}
                         </div>
@@ -828,23 +833,23 @@ export default function App() {
                         viewMode={gpsViewMode as 'map' | 'satellite'}
                         threshold={gpsThreshold}
                       />
-                      <div className="absolute top-4 right-4 z-[1000] bg-white/90 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-blue-100">
-                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">{t.distanceToTarget}</p>
-                        <div className="text-xl font-black text-blue-900">
+                      <div className="absolute top-4 right-4 z-[1000] bg-slate-900/90 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-slate-800">
+                        <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1">{t.distanceToTarget}</p>
+                        <div className="text-xl font-black text-amber-400">
                           {userLocation && currentStage.lat !== undefined && currentStage.lng !== undefined ? (
                             <>
                               {Math.round(calculateDistance(userLocation.lat, userLocation.lng, currentStage.lat, currentStage.lng))}
                               <span className="text-xs ml-0.5">{t.meters}</span>
                             </>
                           ) : (
-                            <Loader2 className="animate-spin text-blue-200" size={20} />
+                            <Loader2 className="animate-spin text-slate-700" size={20} />
                           )}
                         </div>
                       </div>
                     </div>
                   )}
                   
-                  <p className="text-sm text-gray-500 font-medium italic">
+                  <p className="text-sm text-slate-500 font-black uppercase tracking-widest italic">
                     {t.gpsHint}
                   </p>
                 </div>
@@ -852,7 +857,7 @@ export default function App() {
 
               <button 
                 onClick={() => setGameState('RIDDLE')}
-                className="w-full py-3 text-gray-500 font-medium hover:text-gray-700 transition-colors"
+                className="w-full py-3 text-slate-500 font-black uppercase tracking-widest hover:text-amber-400 transition-colors"
               >
                 {t.back}
               </button>
@@ -865,34 +870,34 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-white p-8 rounded-3xl shadow-xl text-center space-y-6 border-b-8 border-purple-200"
+              className="bg-slate-900 p-8 rounded-3xl shadow-2xl text-center space-y-6 border border-slate-800"
             >
               <div className="flex justify-between items-start">
-                <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center">
-                  <Users className="text-purple-600" size={24} />
+                <div className="bg-orange-600/20 w-12 h-12 rounded-full flex items-center justify-center border border-orange-600/30">
+                  <Users className="text-orange-500" size={24} />
                 </div>
                 <button 
                   onClick={() => speak(currentStage.task)}
-                  className="p-3 bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors"
+                  className="p-3 bg-slate-800 text-amber-400 rounded-full hover:bg-slate-700 transition-colors border border-slate-700"
                 >
                   <Volume2 size={24} />
                 </button>
               </div>
               
-              <h3 className="text-2xl font-bold text-purple-900">{t.task}</h3>
-              <p className="text-lg text-gray-700 font-medium">
+              <h3 className="text-2xl font-serif font-black text-orange-500 uppercase tracking-tight">{t.task}</h3>
+              <p className="text-lg text-slate-200 font-medium">
                 {currentStage.task}
               </p>
 
               {currentStage.requirePhoto && (
                 <div className="space-y-4">
-                  <div className="w-full h-48 bg-gray-50 rounded-2xl border-2 border-dashed border-purple-200 flex items-center justify-center overflow-hidden">
+                  <div className="w-full h-48 bg-slate-950 rounded-2xl border-2 border-dashed border-slate-800 flex items-center justify-center overflow-hidden shadow-inner">
                     {capturedPhoto ? (
                       <img src={capturedPhoto} alt="Captured" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="text-gray-400 flex flex-col items-center gap-2">
+                      <div className="text-slate-600 flex flex-col items-center gap-2">
                         <Camera size={32} />
-                        <span className="text-sm">{t.takePhoto}</span>
+                        <span className="text-sm uppercase tracking-widest font-bold">{t.takePhoto}</span>
                       </div>
                     )}
                   </div>
@@ -907,14 +912,14 @@ export default function App() {
                   {!capturedPhoto ? (
                     <button 
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-4 bg-purple-500 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2"
+                      className="w-full py-4 bg-amber-400 text-slate-950 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest"
                     >
                       <Camera size={20} /> {t.takePhoto}
                     </button>
                   ) : (
                     <button 
                       onClick={() => setCapturedPhoto(null)}
-                      className="text-sm text-purple-500 font-bold flex items-center justify-center gap-1 mx-auto"
+                      className="text-sm text-amber-400 font-bold flex items-center justify-center gap-1 mx-auto hover:text-amber-300 transition-colors"
                     >
                       <RotateCcw size={14} /> {t.retakePhoto}
                     </button>
@@ -923,15 +928,15 @@ export default function App() {
               )}
 
               {currentStage.requireAudio && (
-                <div className="space-y-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">{t.recordAudio}:</p>
+                <div className="space-y-4 pt-4 border-t border-slate-800">
+                  <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{t.recordAudio}:</p>
                   <div className="flex flex-col items-center gap-4">
                     {recordedAudio ? (
-                      <div className="w-full bg-red-50 p-4 rounded-2xl border-2 border-red-100 flex flex-col items-center gap-3">
+                      <div className="w-full bg-slate-950 p-4 rounded-2xl border-2 border-orange-600/30 flex flex-col items-center gap-3 shadow-inner">
                         <audio src={recordedAudio} controls className="w-full" />
                         <button 
                           onClick={() => setRecordedAudio(null)}
-                          className="text-xs font-black text-red-400 uppercase tracking-widest hover:text-red-600"
+                          className="text-xs font-black text-orange-500 uppercase tracking-widest hover:text-orange-400 transition-colors"
                         >
                           {t.recordAgain}
                         </button>
@@ -941,8 +946,8 @@ export default function App() {
                         onClick={isRecording ? stopRecording : startRecording}
                         className={`w-full py-8 rounded-2xl flex flex-col items-center justify-center transition-all border-4 border-dashed ${
                           isRecording 
-                            ? 'bg-red-500 border-red-300 text-white animate-pulse' 
-                            : 'bg-red-50 border-red-200 text-red-400 hover:bg-red-100'
+                            ? 'bg-orange-600 border-orange-400 text-white animate-pulse' 
+                            : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-orange-600/50 hover:text-orange-500'
                         }`}
                       >
                         {isRecording ? <Square size={48} fill="white" /> : <Mic size={48} />}
@@ -972,10 +977,10 @@ export default function App() {
                     nextStage();
                   }
                 }}
-                className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 ${
+                className={`w-full py-4 text-slate-950 text-lg font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 uppercase tracking-widest ${
                   (currentStage.requirePhoto && !capturedPhoto) || (currentStage.requireAudio && !recordedAudio)
-                    ? 'bg-gray-300 cursor-not-allowed' 
-                    : 'bg-purple-500 hover:bg-purple-600'
+                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed' 
+                    : 'bg-amber-400 hover:bg-amber-500'
                 }`}
               >
                 {t.finish} <CheckCircle2 />
@@ -989,23 +994,23 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white p-8 rounded-3xl shadow-xl text-center space-y-6 border-b-8 border-yellow-200"
+              className="bg-slate-900 p-8 rounded-3xl shadow-2xl text-center space-y-6 border border-slate-800"
             >
-              <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                <Star className="text-yellow-600" size={32} />
+              <div className="bg-amber-400/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto border border-amber-400/20">
+                <Star className="text-amber-400" size={32} />
               </div>
-              <h3 className="text-2xl font-black text-yellow-900 uppercase">{t.evaluation}</h3>
-              <p className="text-gray-600 font-medium">{t.chooseBestDesc}</p>
+              <h3 className="text-2xl font-serif font-black text-amber-400 uppercase tracking-tight">{t.evaluation}</h3>
+              <p className="text-slate-300 font-medium">{t.chooseBestDesc}</p>
 
               <div className="grid grid-cols-1 gap-3">
                 {teamInfo.members.map((member) => (
                   <button 
                     key={member}
                     onClick={() => setBestPerformer(member)}
-                    className={`p-4 rounded-2xl border-2 font-bold text-lg transition-all ${
+                    className={`p-4 rounded-2xl border-2 font-black text-lg transition-all uppercase tracking-widest ${
                       bestPerformer === member 
-                        ? 'bg-yellow-400 border-yellow-400 text-white shadow-lg scale-[1.02]' 
-                        : 'bg-white border-gray-100 text-gray-600 hover:border-yellow-200'
+                        ? 'bg-amber-400 border-amber-400 text-slate-950 shadow-[0_0_20px_rgba(251,191,36,0.3)] scale-[1.02]' 
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-amber-400/50 hover:text-amber-400'
                     }`}
                   >
                     {member}
@@ -1015,7 +1020,7 @@ export default function App() {
 
               <button 
                 onClick={handleEvaluationSubmit}
-                className="w-full py-4 bg-green-500 text-white font-black rounded-2xl shadow-xl hover:bg-green-600 transition-all uppercase tracking-widest"
+                className="w-full py-4 bg-amber-400 text-slate-950 font-black rounded-2xl shadow-xl hover:bg-amber-500 transition-all uppercase tracking-widest"
               >
                 {t.finish}
               </button>
@@ -1027,12 +1032,12 @@ export default function App() {
               key="finished"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white p-10 rounded-3xl shadow-2xl text-center space-y-8 border-b-8 border-yellow-200"
+              className="bg-slate-900 p-10 rounded-3xl shadow-2xl text-center space-y-8 border border-slate-800"
             >
-              <Trophy size={100} className="text-yellow-400 mx-auto" />
+              <Trophy size={100} className="text-amber-400 mx-auto drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" />
               <div className="space-y-2">
-                <h2 className="text-4xl font-black text-green-900 leading-tight uppercase">{t.bravo} {teamInfo.name}!</h2>
-                <p className="text-xl text-gray-600">
+                <h2 className="text-4xl font-serif font-black text-amber-400 leading-tight uppercase tracking-tighter">{t.bravo} {teamInfo.name}!</h2>
+                <p className="text-xl text-slate-300 font-light">
                   {t.congrats}
                 </p>
               </div>
@@ -1048,22 +1053,22 @@ export default function App() {
                   .map(([name]) => name);
 
                 return (
-                  <div className="bg-yellow-50 p-6 rounded-2xl border-2 border-yellow-100 space-y-3">
-                    <div className="flex items-center justify-center gap-2 text-yellow-700 font-black uppercase tracking-wider">
+                  <div className="bg-slate-950 p-6 rounded-2xl border-2 border-amber-400/20 space-y-3 shadow-inner">
+                    <div className="flex items-center justify-center gap-2 text-amber-400 font-black uppercase tracking-widest text-sm">
                       <Star size={20} fill="currentColor" />
                       <span>{t.specialMention}</span>
                       <Star size={20} fill="currentColor" />
                     </div>
-                    <p className="text-gray-600 font-medium">{t.mostOutstanding}</p>
+                    <p className="text-slate-400 font-medium text-sm uppercase tracking-widest">{t.mostOutstanding}</p>
                     <div className="flex flex-wrap justify-center gap-2">
                       {winners.map((name) => (
-                        <span key={name} className="px-4 py-2 bg-yellow-400 text-white font-black rounded-xl shadow-md text-lg">
+                        <span key={name} className="px-6 py-2 bg-amber-400 text-slate-950 font-black rounded-xl shadow-lg text-lg uppercase tracking-widest">
                           {name}
                         </span>
                       ))}
                     </div>
                     {winners.length > 1 && (
-                      <p className="text-xs text-yellow-600 font-bold uppercase mt-2">{t.tie}</p>
+                      <p className="text-[10px] text-amber-400/60 font-black uppercase mt-2 tracking-widest">{t.tie}</p>
                     )}
                   </div>
                 );
@@ -1071,7 +1076,7 @@ export default function App() {
 
               <button 
                 onClick={() => setGameState('START')}
-                className="w-full py-4 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition-colors"
+                className="w-full py-4 bg-slate-800 text-slate-300 font-black rounded-2xl hover:bg-slate-700 transition-all border border-slate-700 uppercase tracking-widest"
               >
                 {t.playAgain}
               </button>
@@ -1083,25 +1088,25 @@ export default function App() {
 
       {/* Load Game Prompt */}
       {showLoadPrompt && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-start sm:items-center justify-center p-4 pt-10 sm:pt-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] flex items-start sm:items-center justify-center p-4 pt-10 sm:pt-4 overflow-y-auto">
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm space-y-6 my-auto"
+            className="bg-slate-900 p-8 rounded-3xl shadow-2xl w-full max-w-sm space-y-6 my-auto border border-slate-800"
           >
             <div className="text-center space-y-2">
-              <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto">
-                <Download className="text-blue-600" size={24} />
+              <div className="bg-slate-800 w-12 h-12 rounded-full flex items-center justify-center mx-auto border border-slate-700">
+                <Download className="text-amber-400" size={24} />
               </div>
-              <h3 className="text-xl font-bold">{t.downloadGame}</h3>
-              <p className="text-sm text-gray-500">{t.enterCode}</p>
+              <h3 className="text-xl font-serif font-black text-amber-400 uppercase tracking-tight">{t.downloadGame}</h3>
+              <p className="text-sm text-slate-400">{t.enterCode}</p>
             </div>
             <form onSubmit={handleLoadGame} className="space-y-4">
               <input 
                 type="text" 
                 value={loadId}
                 onChange={(e) => setLoadId(e.target.value.toUpperCase())}
-                className="w-full p-4 rounded-xl border-2 border-gray-100 focus:border-blue-400 outline-none text-center text-2xl font-mono font-bold"
+                className="w-full p-4 rounded-xl border-2 border-slate-800 bg-slate-950 focus:border-amber-400 outline-none text-center text-2xl font-mono font-bold text-amber-400 uppercase transition-all shadow-inner"
                 placeholder={language === 'pl' ? 'KOD...' : 'CODE...'}
                 maxLength={6}
                 autoFocus
@@ -1110,14 +1115,14 @@ export default function App() {
                 <button 
                   type="button"
                   onClick={() => setShowLoadPrompt(false)}
-                  className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl"
+                  className="flex-1 py-3 bg-slate-800 text-slate-400 font-bold rounded-xl hover:bg-slate-700 transition-colors"
                 >
                   {t.cancel}
                 </button>
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-amber-400 text-slate-950 font-black rounded-xl shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest"
                 >
                   {isLoading ? <Loader2 className="animate-spin" size={20} /> : t.download}
                 </button>
@@ -1151,30 +1156,32 @@ export default function App() {
 
       {/* Share QR Modal */}
       {showShareQR && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-start sm:items-center justify-center p-4 pt-10 sm:pt-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[70] flex items-start sm:items-center justify-center p-4 pt-10 sm:pt-4 overflow-y-auto">
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm space-y-6 text-center my-auto"
+            className="bg-slate-900 p-8 rounded-3xl shadow-2xl w-full max-w-sm space-y-6 text-center my-auto border border-slate-800"
           >
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xl font-bold text-green-800">{t.share}</h3>
-              <button onClick={() => setShowShareQR(false)} className="p-2 hover:bg-gray-100 rounded-full">
-                <X size={20} className="text-gray-400" />
+              <h3 className="text-xl font-serif font-black text-amber-400 uppercase tracking-tight">{t.share}</h3>
+              <button onClick={() => setShowShareQR(false)} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
+                <X size={20} className="text-slate-500" />
               </button>
             </div>
 
-            <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-green-100 flex justify-center">
+            <div className="bg-slate-950 p-6 rounded-2xl border-2 border-dashed border-slate-800 flex justify-center shadow-inner">
               <QRCodeSVG 
                 value={`${window.location.origin}${window.location.pathname}?game=${gameId}`} 
                 size={200}
                 level="H"
                 includeMargin={true}
+                bgColor="#020617"
+                fgColor="#fbbf24"
               />
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm text-gray-500 font-medium">Link:</p>
+              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Link:</p>
               <button 
                 onClick={() => {
                   const link = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
@@ -1182,25 +1189,25 @@ export default function App() {
                   setCopiedLink(true);
                   setTimeout(() => setCopiedLink(false), 2000);
                 }}
-                className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between group hover:border-green-300 transition-all"
+                className="w-full p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between group hover:border-amber-400/50 transition-all shadow-inner"
               >
-                <span className="text-xs text-gray-400 truncate mr-2">
+                <span className="text-[10px] text-slate-500 truncate mr-2 font-mono">
                   {`${window.location.origin}${window.location.pathname}?game=${gameId}`}
                 </span>
                 {copiedLink ? (
-                  <Check size={18} className="text-green-500 shrink-0" />
+                  <Check size={18} className="text-amber-400 shrink-0" />
                 ) : (
-                  <Copy size={18} className="text-gray-400 group-hover:text-green-600 shrink-0" />
+                  <Copy size={18} className="text-slate-600 group-hover:text-amber-400 shrink-0" />
                 )}
               </button>
               {copiedLink && (
-                <p className="text-[10px] text-green-600 font-bold uppercase animate-pulse">{t.copyLink}</p>
+                <p className="text-[10px] text-amber-400 font-black uppercase animate-pulse tracking-widest">{t.copyLink}</p>
               )}
             </div>
 
             <button 
               onClick={() => setShowShareQR(false)}
-              className="w-full py-3 bg-green-600 text-white font-bold rounded-xl shadow-lg"
+              className="w-full py-3 bg-amber-400 text-slate-950 font-black rounded-xl shadow-lg uppercase tracking-widest"
             >
               {t.enter}
             </button>
@@ -1209,21 +1216,21 @@ export default function App() {
       )}
       {/* Help Modal */}
       {showHelp && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-start sm:items-center justify-center p-4 pt-10 sm:pt-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[80] flex items-start sm:items-center justify-center p-4 pt-10 sm:pt-4 overflow-y-auto">
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-lg my-auto"
+            className="bg-slate-900 p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-lg my-auto border border-slate-800"
           >
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
-                <div className="bg-blue-100 p-2.5 rounded-2xl">
-                  <HelpCircle className="text-blue-600" size={28} />
+                <div className="bg-slate-800 p-2.5 rounded-2xl border border-slate-700">
+                  <HelpCircle className="text-amber-400" size={28} />
                 </div>
-                <h3 className="text-2xl font-black text-blue-900 uppercase tracking-tight">{t.howToPlay}</h3>
+                <h3 className="text-2xl font-serif font-black text-amber-400 uppercase tracking-tight">{t.howToPlay}</h3>
               </div>
-              <button onClick={() => setShowHelp(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <X size={28} className="text-gray-400" />
+              <button onClick={() => setShowHelp(false)} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
+                <X size={28} className="text-slate-500" />
               </button>
             </div>
 
@@ -1232,24 +1239,24 @@ export default function App() {
                 <div 
                   key={step} 
                   className={`rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${
-                    activeHelpStep === step ? 'border-blue-200 bg-blue-50/50' : 'border-gray-100 hover:border-blue-100'
+                    activeHelpStep === step ? 'border-amber-400/30 bg-slate-950' : 'border-slate-800 hover:border-slate-700'
                   }`}
                   onClick={() => setActiveHelpStep(activeHelpStep === step ? null : step)}
                 >
                   <div className="p-4 flex gap-4 items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 shadow-sm transition-colors ${
-                      activeHelpStep === step ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black shrink-0 shadow-lg transition-colors ${
+                      activeHelpStep === step ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-500'
                     }`}>
                       {step}
                     </div>
-                    <h4 className={`font-bold text-lg transition-colors ${
-                      activeHelpStep === step ? 'text-blue-900' : 'text-gray-700'
+                    <h4 className={`font-black text-lg transition-colors uppercase tracking-tight ${
+                      activeHelpStep === step ? 'text-amber-400' : 'text-slate-400'
                     }`}>
                       {t[`helpStep${step}` as keyof typeof t]}
                     </h4>
                     <ChevronRight 
                       size={20} 
-                      className={`ml-auto text-gray-400 transition-transform ${activeHelpStep === step ? 'rotate-90' : ''}`} 
+                      className={`ml-auto text-slate-600 transition-transform ${activeHelpStep === step ? 'rotate-90' : ''}`} 
                     />
                   </div>
                   
@@ -1261,16 +1268,16 @@ export default function App() {
                         exit={{ height: 0, opacity: 0 }}
                         className="px-4 pb-4 ml-12"
                       >
-                        <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
+                        <p className="text-slate-400 leading-relaxed text-sm sm:text-base">
                           {t[`helpStep${step}Desc` as keyof typeof t]}
                         </p>
                         
                         {step === 2 && (
-                          <div className="mt-4 p-4 bg-white rounded-xl border border-blue-100 shadow-sm space-y-2">
-                            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">{t.helpExampleTitle}</p>
-                            <p className="text-sm italic text-gray-700">"{t.helpExampleHint}"</p>
-                            <div className="h-px bg-blue-50 my-2" />
-                            <p className="text-sm font-medium text-green-700">"{t.helpExampleTask}"</p>
+                          <div className="mt-4 p-4 bg-slate-950 rounded-xl border border-slate-800 shadow-inner space-y-2">
+                            <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">{t.helpExampleTitle}</p>
+                            <p className="text-sm italic text-slate-300">"{t.helpExampleHint}"</p>
+                            <div className="h-px bg-slate-800 my-2" />
+                            <p className="text-sm font-black text-orange-500 uppercase tracking-tight">"{t.helpExampleTask}"</p>
                           </div>
                         )}
                       </motion.div>
@@ -1282,7 +1289,7 @@ export default function App() {
 
             <button 
               onClick={() => setShowHelp(false)}
-              className="w-full mt-8 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700 transition-all active:scale-95"
+              className="w-full mt-8 py-4 bg-amber-400 text-slate-950 font-black rounded-2xl shadow-lg hover:bg-amber-500 transition-all uppercase tracking-widest"
             >
               {t.close}
             </button>
