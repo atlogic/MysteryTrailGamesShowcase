@@ -59,8 +59,8 @@ export const PrintPage: React.FC<PrintPageProps> = ({ onBack, language, checkpoi
             </div>
             <p className="mt-4 text-sm text-yellow-700 font-medium italic">
               {language === 'pl' 
-                ? 'Napisz te hasła na jajkach lub karteczkach i ukryj je zamiast kodów QR.'
-                : 'Write these passcodes on eggs or notes and hide them instead of QR codes.'}
+                ? 'Napisz te hasła na karteczkach lub ukryj je w kopertach zamiast kodów QR.'
+                : 'Write these passcodes on notes or hide them in envelopes instead of QR codes.'}
             </p>
           </div>
         )}
@@ -70,7 +70,7 @@ export const PrintPage: React.FC<PrintPageProps> = ({ onBack, language, checkpoi
             <div key={num} className="border-2 border-gray-200 rounded-xl p-4 flex flex-col items-center space-y-2 break-inside-avoid shadow-sm">
               <div className="text-xl font-black text-green-600">#{num}</div>
               <div className="bg-white p-2 border border-gray-100 rounded-lg">
-                <QRCodeSVG value={`egg_hunt_qr_${num}`} size={100} />
+                <QRCodeSVG value={`mystery_trail_qr_${num}`} size={100} />
               </div>
               <div className="text-[10px] text-gray-400 font-mono">ID: {num}</div>
             </div>

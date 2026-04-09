@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { QRScanner } from './components/QRScanner';
 import { PrintPage } from './components/PrintPage';
 import { ParentPanel } from './components/ParentPanel';
+import { GameMap } from './components/GameMap';
 import { 
-  Egg, 
+  Package, 
   Camera, 
   CheckCircle2, 
   Trophy, 
@@ -30,7 +31,9 @@ import {
   Share2,
   Copy,
   X,
-  ChevronRight
+  ChevronRight,
+  Archive,
+  MapPin
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { QRCodeSVG } from 'qrcode.react';
@@ -40,6 +43,7 @@ import {
   saveSessionToFirebase,
   STORAGE_KEY, 
   GAME_ID_KEY, 
+  PARENT_ID_KEY,
   generateGameId,
   TRANSLATIONS
 } from './constants';
@@ -55,7 +59,10 @@ export default function App() {
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [gameState, setGameState] = useState<GameState>('START');
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
-  const [verificationMethod, setVerificationMethod] = useState<'qr' | 'passcode'>('qr');
+  const [verificationMethod, setVerificationMethod] = useState<'qr' | 'passcode' | 'gps'>('qr');
+  const [gpsThreshold, setGpsThreshold] = useState<number>(20);
+  const [gpsViewMode, setGpsViewMode] = useState<'radar' | 'map' | 'satellite'>('radar');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [gameId, setGameId] = useState<string>('');
   const [gameParentId, setGameParentId] = useState<string>('');
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
@@ -88,7 +95,68 @@ export default function App() {
   const handleConfirm = (title: string, message: string, onConfirm: () => void) => {
     setConfirm({ title, message, onConfirm });
   };
+
   const [language, setLanguage] = useState<Language>('pl');
+  const t = TRANSLATIONS[language];
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // in metres
+  };
+
+  useEffect(() => {
+    let watchId: number | null = null;
+
+    if (gameState === 'SCANNING' && verificationMethod === 'gps') {
+      if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setUserLocation({ lat: latitude, lng: longitude });
+            
+            const currentStage = checkpoints[currentStageIndex];
+            if (currentStage && currentStage.lat !== undefined && currentStage.lng !== undefined) {
+              const distance = calculateDistance(latitude, longitude, currentStage.lat, currentStage.lng);
+              if (distance < gpsThreshold) { // Use dynamic threshold
+                showToast(t.pointReached, 'success');
+                setGameState('TASK');
+                confetti({
+                  particleCount: 100,
+                  spread: 70,
+                  origin: { y: 0.6 }
+                });
+              }
+            }
+          },
+          (error) => {
+            console.error("Geolocation error:", error);
+            showToast(t.locationError, 'error');
+          },
+          { enableHighAccuracy: true }
+        );
+      } else {
+        showToast(t.locationError, 'error');
+      }
+    } else {
+      setUserLocation(null);
+    }
+
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [gameState, verificationMethod, currentStageIndex, checkpoints, t.pointReached, t.locationError]);
   const [passcodeInput, setPasscodeInput] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -98,11 +166,12 @@ export default function App() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Detect supported MIME types
-      const mimeTypes = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav'];
-      const supportedType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
+      // Detect supported MIME types - prefer mp4 for iOS compatibility
+      const mimeTypes = ['audio/mp4', 'audio/aac', 'audio/webm', 'audio/wav'];
+      const supportedType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || '';
       
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: supportedType });
+      const options = supportedType ? { mimeType: supportedType } : {};
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -113,7 +182,8 @@ export default function App() {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: supportedType || 'audio/webm' });
+        const actualType = mediaRecorder.mimeType || supportedType || 'audio/mp3';
+        const audioBlob = new Blob(audioChunksRef.current, { type: actualType });
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
@@ -156,9 +226,24 @@ export default function App() {
       localStorage.setItem(GAME_ID_KEY, newId);
     }
 
-    const savedMethod = localStorage.getItem('easter_egg_hunt_method');
-    if (savedMethod === 'qr' || savedMethod === 'passcode') {
-      setVerificationMethod(savedMethod);
+    const savedParentId = localStorage.getItem(PARENT_ID_KEY);
+    if (savedParentId) {
+      setGameParentId(savedParentId);
+    }
+
+    const savedMethod = localStorage.getItem('mystery_trail_method');
+    if (savedMethod === 'qr' || savedMethod === 'passcode' || savedMethod === 'gps') {
+      setVerificationMethod(savedMethod as 'qr' | 'passcode' | 'gps');
+    }
+
+    const savedThreshold = localStorage.getItem('mystery_trail_gps_threshold');
+    if (savedThreshold) {
+      setGpsThreshold(parseInt(savedThreshold));
+    }
+
+    const savedViewMode = localStorage.getItem('mystery_trail_gps_view_mode');
+    if (savedViewMode === 'radar' || savedViewMode === 'map' || savedViewMode === 'satellite') {
+      setGpsViewMode(savedViewMode as 'radar' | 'map' | 'satellite');
     }
 
     // Check for game in URL
@@ -250,7 +335,7 @@ export default function App() {
   };
 
   const handleQRScan = (decodedText: string) => {
-    const expectedValue = `egg_hunt_qr_${currentStage.qrNumber}`;
+    const expectedValue = `mystery_trail_qr_${currentStage.qrNumber}`;
     if (decodedText === expectedValue) {
       setGameState('TASK');
       speak(currentStage.task);
@@ -382,11 +467,16 @@ export default function App() {
       if (gameData) {
         setCheckpoints(gameData.checkpoints);
         setVerificationMethod(gameData.verificationMethod || 'qr');
+        setGpsThreshold(gameData.gpsThreshold || 20);
+        setGpsViewMode(gameData.gpsViewMode || 'radar');
         setGameId(id.toUpperCase());
         setGameParentId(gameData.parentId);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData.checkpoints));
         localStorage.setItem(GAME_ID_KEY, id.toUpperCase());
-        localStorage.setItem('easter_egg_hunt_method', gameData.verificationMethod || 'qr');
+        localStorage.setItem(PARENT_ID_KEY, gameData.parentId);
+        localStorage.setItem('mystery_trail_method', gameData.verificationMethod || 'qr');
+        localStorage.setItem('mystery_trail_gps_threshold', (gameData.gpsThreshold || 20).toString());
+        localStorage.setItem('mystery_trail_gps_view_mode', gameData.gpsViewMode || 'radar');
         return true;
       }
     } catch (error) {
@@ -411,8 +501,6 @@ export default function App() {
     }
   };
 
-  const t = TRANSLATIONS[language];
-
   if (gameState === 'PRINT' && showParentPanel) {
     return <PrintPage onBack={() => setGameState('START')} language={language} checkpoints={checkpoints} gameId={gameId} />;
   }
@@ -423,7 +511,7 @@ export default function App() {
       <header className="w-full max-w-2xl flex justify-between items-center mb-8">
         <div className="flex items-center gap-2">
           <div className="bg-yellow-400 p-2 rounded-full shadow-md">
-            <Egg className="text-white" size={24} />
+            <Archive className="text-white" size={24} />
           </div>
           <h1 className="text-lg sm:text-xl font-bold text-green-800 truncate max-w-[150px] sm:max-w-none">
             {t.title}
@@ -501,8 +589,8 @@ export default function App() {
               </button>
 
               <div className="relative inline-block">
-                <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
-                  <Egg size={80} className="text-yellow-400 mx-auto" />
+                <motion.div animate={{ rotate: [0, 10, -10, 0], y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
+                  <Archive size={80} className="text-yellow-600 mx-auto" />
                 </motion.div>
               </div>
               
@@ -584,7 +672,7 @@ export default function App() {
                     value={teamInfo.name}
                     onChange={(e) => setTeamInfo({ ...teamInfo, name: e.target.value })}
                     className="w-full p-4 bg-blue-50 border-2 border-blue-100 rounded-xl focus:border-blue-500 outline-none font-black text-xl text-blue-900 text-center"
-                    placeholder="np. SZYBKIE ZAJĄCZKI"
+                    placeholder="np. SZYBKIE WILKI"
                   />
                 </div>
 
@@ -632,12 +720,18 @@ export default function App() {
               <button 
                 onClick={() => setGameState('SCANNING')}
                 className={`w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 ${
-                  verificationMethod === 'passcode' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'
+                  verificationMethod === 'passcode' ? 'bg-yellow-500 hover:bg-yellow-600' : 
+                  verificationMethod === 'gps' ? 'bg-blue-600 hover:bg-blue-700' :
+                  'bg-blue-500 hover:bg-blue-600'
                 }`}
               >
                 {verificationMethod === 'passcode' ? (
                   <>
                     <Lock size={24} /> {t.enterPasscode}
+                  </>
+                ) : verificationMethod === 'gps' ? (
+                  <>
+                    <MapPin size={24} /> {t.gpsMethod}
                   </>
                 ) : (
                   <>
@@ -658,20 +752,24 @@ export default function App() {
             >
               <div className="text-center mb-4">
                 <h3 className="text-xl font-bold text-green-800">
-                  {verificationMethod === 'passcode' ? t.enterPasscode : t.scanQR} #{currentStage.qrNumber}
+                  {verificationMethod === 'passcode' ? t.enterPasscode : 
+                   verificationMethod === 'gps' ? t.gpsMethod :
+                   t.scanQR} #{currentStage.qrNumber}
                 </h3>
                 <p className="text-gray-500">
-                  {verificationMethod === 'passcode' ? (language === 'pl' ? 'Wpisz hasło znalezione w tym miejscu.' : 'Enter the passcode found at this location.') : t.qrInstructions}
+                  {verificationMethod === 'passcode' ? (language === 'pl' ? 'Wpisz hasło znalezione w tym miejscu.' : 'Enter the passcode found at this location.') : 
+                   verificationMethod === 'gps' ? t.gpsHint :
+                   t.qrInstructions}
                 </p>
               </div>
               
               {verificationMethod === 'qr' ? (
                 <QRScanner 
                   onScan={handleQRScan} 
-                  expectedValue={`egg_hunt_qr_${currentStage.qrNumber}`} 
+                  expectedValue={`mystery_trail_qr_${currentStage.qrNumber}`} 
                   language={language}
                 />
-              ) : (
+              ) : verificationMethod === 'passcode' ? (
                 <div className="bg-white p-6 rounded-3xl shadow-lg border-2 border-yellow-100 space-y-4">
                   <div className="flex items-center gap-2 text-yellow-600 mb-2">
                     <Lock size={20} />
@@ -693,6 +791,62 @@ export default function App() {
                       {t.enter}
                     </button>
                   </form>
+                </div>
+              ) : (
+                <div className="bg-white p-4 sm:p-6 rounded-3xl shadow-lg border-2 border-blue-100 text-center space-y-4 sm:space-y-6 overflow-hidden">
+                  {gpsViewMode === 'radar' ? (
+                    <div className="space-y-6 py-4">
+                      <div className="relative w-32 h-32 mx-auto">
+                        <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-20"></div>
+                        <div className="relative z-10 w-full h-full bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg">
+                          <MapPin size={48} className="animate-bounce" />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <p className="text-sm font-black text-blue-400 uppercase tracking-widest">{t.distanceToTarget}</p>
+                        <div className="text-4xl font-black text-blue-900">
+                          {userLocation && currentStage.lat !== undefined && currentStage.lng !== undefined ? (
+                            <>
+                              {Math.round(calculateDistance(userLocation.lat, userLocation.lng, currentStage.lat, currentStage.lng))}
+                              <span className="text-xl ml-1">{t.meters}</span>
+                            </>
+                          ) : (
+                            <div className="flex justify-center">
+                              <Loader2 className="animate-spin text-blue-200" size={32} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-80 sm:h-96 w-full relative">
+                      <GameMap 
+                        userLocation={userLocation}
+                        targetCheckpoint={currentStage}
+                        previousCheckpoints={checkpoints.slice(0, currentStageIndex)}
+                        viewMode={gpsViewMode as 'map' | 'satellite'}
+                        threshold={gpsThreshold}
+                      />
+                      <div className="absolute top-4 right-4 z-[1000] bg-white/90 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-blue-100">
+                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">{t.distanceToTarget}</p>
+                        <div className="text-xl font-black text-blue-900">
+                          {userLocation && currentStage.lat !== undefined && currentStage.lng !== undefined ? (
+                            <>
+                              {Math.round(calculateDistance(userLocation.lat, userLocation.lng, currentStage.lat, currentStage.lng))}
+                              <span className="text-xs ml-0.5">{t.meters}</span>
+                            </>
+                          ) : (
+                            <Loader2 className="animate-spin text-blue-200" size={20} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <p className="text-sm text-gray-500 font-medium italic">
+                    {t.gpsHint}
+                  </p>
                 </div>
               )}
 
@@ -980,10 +1134,15 @@ export default function App() {
           gameId={gameId}
           language={language}
           verificationMethod={verificationMethod}
-          onUpdate={(newCp, newId, newMethod) => {
+          gpsThreshold={gpsThreshold}
+          gpsViewMode={gpsViewMode}
+          onUpdate={(newCp, newId, newMethod, newParentId, newThreshold, newViewMode) => {
             setCheckpoints(newCp);
             setGameId(newId);
             setVerificationMethod(newMethod);
+            setGameParentId(newParentId);
+            if (newThreshold !== undefined) setGpsThreshold(newThreshold);
+            if (newViewMode !== undefined) setGpsViewMode(newViewMode);
           }}
           onPrint={() => setGameState('PRINT')}
           onClose={() => setShowParentPanel(false)}

@@ -14,17 +14,29 @@
     },
     "Session": {
       "title": "Session",
-      "description": "A completed game session with results",
+      "description": "A completed game session metadata",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "gameId": { "type": "string" },
+        "parentId": { "type": "string" },
         "teamName": { "type": "string" },
         "members": { "type": "array" },
-        "results": { "type": "array" },
         "timestamp": { "type": "number" }
       },
-      "required": ["id", "gameId", "teamName", "members", "results", "timestamp"]
+      "required": ["id", "gameId", "parentId", "teamName", "members", "timestamp"]
+    },
+    "CheckpointResult": {
+      "title": "CheckpointResult",
+      "description": "Individual result for a checkpoint in a session",
+      "type": "object",
+      "properties": {
+        "checkpointId": { "type": "string" },
+        "photo": { "type": "string", "description": "Base64 encoded image" },
+        "audio": { "type": "string", "description": "Base64 encoded audio" },
+        "bestPerformer": { "type": "string" }
+      },
+      "required": ["checkpointId"]
     }
   },
   "firestore": {
@@ -34,7 +46,11 @@
     },
     "/sessions/{sessionId}": {
       "schema": "Session",
-      "description": "Storage for game results"
+      "description": "Storage for game session metadata"
+    },
+    "/sessions/{sessionId}/results/{resultId}": {
+      "schema": "CheckpointResult",
+      "description": "Storage for individual checkpoint results with media"
     }
   }
 }

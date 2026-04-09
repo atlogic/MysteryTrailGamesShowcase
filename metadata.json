@@ -1,8 +1,9 @@
 {
-  "name": "Easter Game",
-  "description": "Interaktywna gra terenowa dla dzieci typu escape room. Szukaj jajek, rozwiązuj zagadki i skanuj kody QR w ogrodzie.",
+  "name": "Mystery Trail",
+  "description": "Interaktywna gra terenowa dla dzieci typu escape room. Rozwiązuj zagadki, skanuj kody QR i znajdź ukryty skarb.",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "geolocation"
   ]
 }

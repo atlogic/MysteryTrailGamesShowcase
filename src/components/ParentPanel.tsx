@@ -24,9 +24,10 @@ import {
   Share2,
   Mail,
   Lock,
-  QrCode
+  QrCode,
+  MapPin
 } from 'lucide-react';
-import { loadSessionsFromFirebase, loadUserGamesFromFirebase, loadSessionResults, generateGameId, GAME_ID_KEY, TRANSLATIONS } from '../constants';
+import { loadSessionsFromFirebase, loadUserGamesFromFirebase, loadSessionResults, saveSessionToFirebase, generateGameId, GAME_ID_KEY, PARENT_ID_KEY, TRANSLATIONS } from '../constants';
 import { GameSession, GameData, Language } from '../types';
 import { Toast, ToastType, ConfirmModal } from './Toast';
 import { 
@@ -45,17 +46,38 @@ interface ParentPanelProps {
   checkpoints: Checkpoint[];
   gameId: string;
   language: Language;
-  verificationMethod: 'qr' | 'passcode';
-  onUpdate: (newCheckpoints: Checkpoint[], newGameId: string, newMethod: 'qr' | 'passcode') => void;
+  verificationMethod: 'qr' | 'passcode' | 'gps';
+  gpsThreshold?: number;
+  gpsViewMode?: 'radar' | 'map' | 'satellite';
+  onUpdate: (
+    newCheckpoints: Checkpoint[], 
+    newGameId: string, 
+    newMethod: 'qr' | 'passcode' | 'gps', 
+    newParentId: string,
+    gpsThreshold?: number,
+    gpsViewMode?: 'radar' | 'map' | 'satellite'
+  ) => void;
   onPrint: () => void;
   onClose: () => void;
 }
 
-export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, language, verificationMethod, onUpdate, onPrint, onClose }) => {
+export const ParentPanel: React.FC<ParentPanelProps> = ({ 
+  checkpoints, 
+  gameId, 
+  language, 
+  verificationMethod, 
+  gpsThreshold = 20,
+  gpsViewMode = 'radar',
+  onUpdate, 
+  onPrint, 
+  onClose 
+}) => {
   const t = TRANSLATIONS[language];
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [localCheckpoints, setLocalCheckpoints] = useState<Checkpoint[]>(checkpoints);
-  const [localMethod, setLocalMethod] = useState<'qr' | 'passcode'>(verificationMethod);
+  const [localMethod, setLocalMethod] = useState<'qr' | 'passcode' | 'gps'>(verificationMethod);
+  const [localGpsThreshold, setLocalGpsThreshold] = useState<number>(gpsThreshold);
+  const [localGpsViewMode, setLocalGpsViewMode] = useState<'radar' | 'map' | 'satellite'>(gpsViewMode);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'config' | 'history' | 'my-games'>('config');
@@ -85,8 +107,189 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
   useEffect(() => {
     setLocalMethod(verificationMethod);
   }, [verificationMethod]);
+
+  useEffect(() => {
+    setLocalGpsThreshold(gpsThreshold);
+  }, [gpsThreshold]);
+
+  useEffect(() => {
+    setLocalGpsViewMode(gpsViewMode);
+  }, [gpsViewMode]);
   
   // Auth state
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const compressBase64Image = async (base64: string, maxWidth = 1024, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (maxWidth / width) * height;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+    });
+  };
+
+  const fetchAsBase64 = async (url: string): Promise<string> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error(`Failed to fetch and convert ${url}:`, error);
+      throw error;
+    }
+  };
+
+  const generateTestImage = (): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 600;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    // Create a nice gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 800, 600);
+    gradient.addColorStop(0, '#10b981');
+    gradient.addColorStop(1, '#3b82f6');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 800, 600);
+
+    // Add some "real" looking elements
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    for (let i = 0; i < 20; i++) {
+      ctx.beginPath();
+      ctx.arc(Math.random() * 800, Math.random() * 600, Math.random() * 100, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Add text
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 40px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ZDJĘCIE TESTOWE', 400, 280);
+    ctx.font = '20px sans-serif';
+    ctx.fillText(new Date().toLocaleString(), 400, 320);
+
+    return canvas.toDataURL('image/jpeg', 0.8);
+  };
+
+  const generateTestAudio = async (): Promise<string> => {
+    const duration = 3; // seconds
+    const sampleRate = 44100;
+    const numChannels = 1;
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffer = audioContext.createBuffer(numChannels, sampleRate * duration, sampleRate);
+    const channelData = buffer.getChannelData(0);
+
+    // Generate a "long sound" - a sweeping frequency
+    for (let i = 0; i < buffer.length; i++) {
+      const t = i / sampleRate;
+      const freq = 200 + 400 * (t / duration); // Sweep from 200Hz to 600Hz
+      channelData[i] = Math.sin(2 * Math.PI * freq * t) * 0.5;
+    }
+
+    // Helper to convert AudioBuffer to WAV
+    const bufferToWav = (abuffer: AudioBuffer) => {
+      const numOfChan = abuffer.numberOfChannels;
+      const length = abuffer.length * numOfChan * 2 + 44;
+      const buffer = new ArrayBuffer(length);
+      const view = new DataView(buffer);
+      const channels = [];
+      let i;
+      let sample;
+      let offset = 0;
+      let pos = 0;
+
+      const setUint16 = (data: number) => { view.setUint16(pos, data, true); pos += 2; };
+      const setUint32 = (data: number) => { view.setUint32(pos, data, true); pos += 4; };
+
+      setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+      setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+      setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan);
+      setUint16(numOfChan * 2); setUint16(16);
+      setUint32(0x61746164); setUint32(length - pos - 4);
+
+      for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+      while (pos < length) {
+        for (i = 0; i < numOfChan; i++) {
+          sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF) | 0;
+          view.setInt16(pos, sample, true);
+          pos += 2;
+        }
+        offset++;
+      }
+      return new Blob([buffer], { type: "audio/wav" });
+    };
+
+    const wavBlob = bufferToWav(buffer);
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(wavBlob);
+    });
+  };
+
+  const seedTestData = async () => {
+    if (!user) return;
+    
+    setIsSeeding(true);
+    try {
+      console.log("[Test] Generowanie mediów lokalnie (bez CORS)...");
+      
+      const samplePhoto = generateTestImage();
+      const sampleAudio = await generateTestAudio();
+
+      console.log(`[Test] Rozmiar zdjęcia: ${Math.round(samplePhoto.length / 1024)} KB`);
+      console.log(`[Test] Rozmiar dźwięku: ${Math.round(sampleAudio.length / 1024)} KB`);
+
+      const testSession: GameSession = {
+        id: `test_${Date.now()}`,
+        gameId: gameId,
+        parentId: user.uid,
+        teamName: "EKIPA TESTOWA 🚀",
+        members: ["Tester Adam", "Testerka Ewa"],
+        timestamp: Date.now(),
+        results: [
+          {
+            checkpointId: checkpoints[0]?.id || '1',
+            photo: samplePhoto,
+            audio: sampleAudio,
+            bestPerformer: "Tester Adam"
+          }
+        ]
+      };
+      
+      console.log("[Test] Wysyłanie sesji z wygenerowanymi mediami...", testSession.id);
+      await saveSessionToFirebase(testSession);
+      showToast(language === 'pl' ? 'Sukces! Dane wygenerowane i zapisane w bazie.' : 'Success! Data generated and saved in DB.', 'success');
+      loadHistory();
+    } catch (err) {
+      console.error("Błąd podczas seedowania:", err);
+      showToast("Błąd zapisu danych testowych.", 'error');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
@@ -143,14 +346,38 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
     onClose();
   };
 
+  const getCurrentLocation = (id: string) => {
+    if (!navigator.geolocation) {
+      showToast(t.locationError, 'error');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        updateCheckpoint(id, { 
+          lat: position.coords.latitude, 
+          lng: position.coords.longitude 
+        });
+        showToast(t.locationSuccess, 'success');
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        showToast(t.locationError, 'error');
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
   const startNewGame = () => {
     handleConfirm(t.confirm, t.confirmNewGame, () => {
       const newId = generateGameId();
+      const parentId = user?.uid || '';
       setLocalCheckpoints([]);
       setLocalMethod('qr');
-      onUpdate([], newId, 'qr');
+      onUpdate([], newId, 'qr', parentId);
       localStorage.setItem(GAME_ID_KEY, newId);
-      localStorage.setItem('easter_egg_hunt_method', 'qr');
+      localStorage.setItem(PARENT_ID_KEY, parentId);
+      localStorage.setItem('mystery_trail_method', 'qr');
       setActiveTab('config');
     });
   };
@@ -171,8 +398,9 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
   const selectGame = (game: GameData) => {
     setLocalCheckpoints(game.checkpoints);
     setLocalMethod(game.verificationMethod || 'qr');
-    onUpdate(game.checkpoints, game.id, game.verificationMethod || 'qr');
+    onUpdate(game.checkpoints, game.id, game.verificationMethod || 'qr', game.parentId);
     localStorage.setItem(GAME_ID_KEY, game.id);
+    localStorage.setItem(PARENT_ID_KEY, game.parentId);
     setActiveTab('config');
   };
 
@@ -205,6 +433,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
   };
 
   const toggleSession = async (session: GameSession) => {
+    console.log("[History] Toggling session:", session.id);
     if (selectedSession?.id === session.id) {
       setSelectedSession(null);
       return;
@@ -213,15 +442,19 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
     setSelectedSession(session);
     
     // If results are not loaded yet, fetch them from the sub-collection
-    if (!session.results) {
+    if (!session.results || session.results.length === 0) {
+      console.log("[History] Loading results for session:", session.id);
       try {
         const results = await loadSessionResults(session.id);
+        console.log("[History] Results loaded:", results.length);
         setSessions(prev => prev.map(s => s.id === session.id ? { ...s, results } : s));
         // Update selected session to show the results immediately
         setSelectedSession({ ...session, results });
       } catch (err) {
         console.error("Error loading session results:", err);
       }
+    } else {
+      console.log("[History] Results already present:", session.results.length);
     }
   };
 
@@ -305,11 +538,15 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
     
     setIsSaving(true);
     try {
-      const savedId = await saveGameToFirebase(gameId, localCheckpoints, localMethod);
+      const savedId = await saveGameToFirebase(gameId, localCheckpoints, localMethod, localGpsThreshold, localGpsViewMode);
+      const parentId = user?.uid || '';
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localCheckpoints));
-      localStorage.setItem('easter_egg_hunt_method', localMethod);
+      localStorage.setItem('mystery_trail_method', localMethod);
+      localStorage.setItem('mystery_trail_gps_threshold', localGpsThreshold.toString());
+      localStorage.setItem('mystery_trail_gps_view_mode', localGpsViewMode);
       localStorage.setItem(GAME_ID_KEY, savedId);
-      onUpdate(localCheckpoints, savedId, localMethod);
+      localStorage.setItem(PARENT_ID_KEY, parentId);
+      onUpdate(localCheckpoints, savedId, localMethod, parentId, localGpsThreshold, localGpsViewMode);
       showToast(t.savedSuccess + savedId, 'success');
       onClose();
     } catch (error: any) {
@@ -485,6 +722,30 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 bg-gray-50">
+          {/* Image Zoom Modal */}
+          <AnimatePresence>
+            {zoomImage && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+                onClick={() => setZoomImage(null)}
+              >
+                <button className="absolute top-4 right-4 text-white p-2">
+                  <X size={32} />
+                </button>
+                <motion.img 
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  src={zoomImage} 
+                  className="max-w-full max-h-full rounded-lg shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {activeTab === 'config' ? (
             <>
               <div className="flex justify-between items-center mb-4">
@@ -537,7 +798,64 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
                   >
                     <Lock size={16} /> {t.passcodeMethod}
                   </button>
+                  <button 
+                    onClick={() => setLocalMethod('gps')}
+                    className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 border-2 ${
+                      localMethod === 'gps' 
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
+                        : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'
+                    }`}
+                  >
+                    <MapPin size={16} /> {t.gpsMethod}
+                  </button>
                 </div>
+
+                {localMethod === 'gps' && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-4 pt-4 border-t border-gray-100 space-y-4"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t.gpsThreshold}</label>
+                          <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{localGpsThreshold}m</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="3" 
+                          max="100" 
+                          step="1"
+                          value={localGpsThreshold}
+                          onChange={(e) => setLocalGpsThreshold(parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <p className="text-[10px] text-gray-400 italic">{t.accuracyHint}</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t.gpsViewMode}</label>
+                        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+                          {(['radar', 'map', 'satellite'] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              onClick={() => setLocalGpsViewMode(mode)}
+                              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                                localGpsViewMode === mode 
+                                  ? 'bg-white text-blue-600 shadow-sm' 
+                                  : 'text-gray-400 hover:text-gray-600'
+                              }`}
+                            >
+                              {t[mode]}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400 italic">{t.viewModeHint}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
               {localCheckpoints.length === 0 && (
                 <div className="text-center py-8 text-gray-400">
@@ -595,6 +913,41 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
                               className="w-full p-2.5 text-sm font-bold rounded-lg border-2 border-gray-100 focus:border-yellow-500 focus:bg-white bg-gray-50 outline-none transition-all"
                               placeholder={t.passcodePlaceholder}
                             />
+                          </div>
+                        )}
+                        {localMethod === 'gps' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] font-black text-gray-400 uppercase mb-0.5 ml-1">{t.latitude}</label>
+                              <input 
+                                type="number" 
+                                step="any"
+                                value={cp.lat || ''}
+                                onChange={(e) => updateCheckpoint(cp.id, { lat: parseFloat(e.target.value) })}
+                                className="w-full p-2.5 text-sm font-bold rounded-lg border-2 border-gray-100 focus:border-blue-500 focus:bg-white bg-gray-50 outline-none transition-all"
+                                placeholder="52.2297"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black text-gray-400 uppercase mb-0.5 ml-1">{t.longitude}</label>
+                              <div className="flex gap-2">
+                                <input 
+                                  type="number" 
+                                  step="any"
+                                  value={cp.lng || ''}
+                                  onChange={(e) => updateCheckpoint(cp.id, { lng: parseFloat(e.target.value) })}
+                                  className="flex-1 p-2.5 text-sm font-bold rounded-lg border-2 border-gray-100 focus:border-blue-500 focus:bg-white bg-gray-50 outline-none transition-all"
+                                  placeholder="21.0122"
+                                />
+                                <button 
+                                  onClick={() => getCurrentLocation(cp.id)}
+                                  className="p-2.5 bg-blue-50 text-blue-600 rounded-lg border-2 border-blue-100 hover:bg-blue-100 transition-all flex items-center justify-center"
+                                  title={t.getCurrentLocation}
+                                >
+                                  <MapPin size={18} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -743,6 +1096,16 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
             </div>
           ) : (
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <button 
+                  onClick={seedTestData}
+                  disabled={isSeeding}
+                  className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-black uppercase hover:bg-gray-300 transition-all flex items-center gap-2"
+                >
+                  {isSeeding ? <div className="w-3 h-3 border-2 border-gray-400 border-t-gray-600 rounded-full animate-spin" /> : <Plus size={12} />}
+                  Testuj Historię (Dodaj Dane)
+                </button>
+              </div>
               {isLoadingSessions ? (
                 <div className="flex flex-col items-center py-12 text-gray-400">
                   <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-4" />
@@ -802,13 +1165,22 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({ checkpoints, gameId, l
                                     
                                     <div className="flex gap-2">
                                       {res.photo && (
-                                        <div className="w-20 h-20 rounded-md overflow-hidden border border-gray-100">
+                                        <button 
+                                          onClick={() => setZoomImage(res.photo!)}
+                                          className="w-20 h-20 rounded-md overflow-hidden border border-gray-100 hover:ring-2 hover:ring-green-500 transition-all"
+                                        >
                                           <img src={res.photo} alt="Result" className="w-full h-full object-cover" />
-                                        </div>
+                                        </button>
                                       )}
                                       {res.audio && (
                                         <div className="flex-1 flex items-center">
-                                          <audio controls src={res.audio} className="w-full h-8 scale-90 origin-left" />
+                                          <audio 
+                                            key={`${session.id}_${idx}`}
+                                            controls 
+                                            src={res.audio} 
+                                            preload="metadata"
+                                            className="w-full h-8 scale-90 origin-left" 
+                                          />
                                         </div>
                                       )}
                                     </div>

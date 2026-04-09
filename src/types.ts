@@ -11,6 +11,8 @@ export interface Checkpoint {
   requireEvaluation?: boolean;
   qrNumber: number; // 1-30
   passcode?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface CheckpointResult {
@@ -40,5 +42,7 @@ export interface GameData {
   parentId: string;
   checkpoints: Checkpoint[];
   createdAt: number;
-  verificationMethod?: 'qr' | 'passcode';
+  verificationMethod?: 'qr' | 'passcode' | 'gps';
+  gpsThreshold?: number; // in meters
+  gpsViewMode?: 'radar' | 'map' | 'satellite';
 }

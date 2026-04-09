@@ -1,11 +1,11 @@
-import { Checkpoint, GameData, GameSession, Language } from './types';
+import { Checkpoint, GameData, GameSession, CheckpointResult, Language } from './types';
 
 export const TRANSLATIONS: Record<Language, any> = {
   pl: {
-    title: "Wielkanocna Przygoda",
-    subtitle: "Epicka gra Terenowa dla dzieci, młodzieży i dorosłych, chowaj jajka, twórz przygody, spraw by twoje dzieci świetnie się bawiły w święta!",
+    title: "Tajemniczy Szlak",
+    subtitle: "Epicka gra terenowa dla dzieci, młodzieży i dorosłych. Twórz niezapomniane przygody, rozwiązuj zagadki i znajdź ukryty skarb!",
     start: "ZACZYNAMY!",
-    welcome: "Witajcie! Rozwiązujcie zagadki, skanujcie kody i wykonujcie zadania, aby znaleźć skarb!",
+    welcome: "Witajcie na Tajemniczym Szlaku! Rozwiązujcie zagadki, skanujcie kody i wykonujcie zadania, aby dotrzeć do celu!",
     downloadGame: "Podaj numer istniejącej gry",
     enterCode: "Wpisz 6-znakowy kod gry",
     cancel: "Anuluj",
@@ -123,18 +123,18 @@ export const TRANSLATIONS: Record<Language, any> = {
     helpStep2: "Stwórz trasę i dodaj punkty",
     helpStep2Desc: "Dodawaj kolejne kroki przygody. Do każdego punktu możesz dołączyć zdjęcie podpowiadające lokalizację (np. zdjęcie drzewa), napisać zagadkę oraz wyznaczyć zadanie do wykonania.",
     helpStep3: "Wybierz sposób weryfikacji",
-    helpStep3Desc: "Podczas tworzenia gry wybierz, czy dzieci mają skanować kody QR, czy wpisywać hasła. Jeśli nie masz drukarki, hasła są idealną alternatywą - możesz je napisać na jajkach lub karteczkach.",
+    helpStep3Desc: "Podczas tworzenia gry wybierz, czy dzieci mają skanować kody QR, czy wpisywać hasła. Jeśli nie masz drukarki, hasła są idealną alternatywą - możesz je napisać na karteczkach lub ukryć w kopertach.",
     helpStep4: "Zadania i ocena starań",
-    helpStep4Desc: "Dzieci mogą potwierdzać wykonanie zadań robiąc zdjęcie lub nagrywając swój śpiew. Możesz też włączyć opcję oceny – na koniec gry wybierzecie osobę, która najbardziej się starała, a aplikacja przyzna jej specjalne wyróżnienie!",
+    helpStep4Desc: "Dzieci mogą potwierdzać wykonanie zadań robiąc zdjęcie lub nagrywając głos. Możesz też włączyć opcję oceny – na koniec gry wybierzecie osobę, która najbardziej się starała, a aplikacja przyzna jej specjalne wyróżnienie!",
     helpStep5: "Udostępnij i graj!",
     helpStep5Desc: "Gotową grę możesz udostępnić innym rodzicom za pomocą kodu QR lub linku. Dzieci skanują kody lub wpisują hasła, rozwiązują zagadki i zdobywają punkty w drodze do skarbu!",
     helpExampleTitle: "Przykład kroku:",
-    helpExampleHint: "Zagadka: 'Rosnę w tym ogrodzie najdłużej, jestem największy i patrzę na wszystkich z góry. Przy moim korzeniu ktoś jajko ukrył – znajdź je, a powiem Ci co robić dalej!'",
-    helpExampleTask: "Zadanie: 'Zaśpiewajcie wspólnie wesołą piosenkę o zajączku!'",
+    helpExampleHint: "Zagadka: 'Rosnę w tym ogrodzie najdłużej, jestem największy i patrzę na wszystkich z góry. Przy moim korzeniu ktoś ukrył wskazówkę – znajdź ją, a powiem Ci co robić dalej!'",
+    helpExampleTask: "Zadanie: 'Zaśpiewajcie wspólnie wesołą piosenkę o przygodzie!'",
     createNewGame: "STWÓRZ NOWĄ GRĘ",
     close: "Zamknij",
     passcode: "Hasło (zamiast QR)",
-    enterPasscode: "Wpisz hasło z jajka",
+    enterPasscode: "Wpisz hasło ze wskazówki",
     passcodePlaceholder: "np. KROK1",
     wrongPasscode: "Błędne hasło! Spróbuj ponownie.",
     orEnterPasscode: "lub wpisz hasło",
@@ -142,13 +142,31 @@ export const TRANSLATIONS: Record<Language, any> = {
     verificationMethod: "Metoda weryfikacji",
     qrMethod: "Kody QR (skanowanie)",
     passcodeMethod: "Hasła (wpisywanie)",
-    methodWarning: "Zmiana metody usunie obecne ustawienia haseł!",
+    gpsMethod: "GPS (lokalizacja)",
+    methodWarning: "Zmiana metody usunie obecne ustawienia weryfikacji!",
+    scannerHint: "Zeskanuj kod QR, aby przejść dalej",
+    gpsHint: "Dotrzyj do celu, aby odblokować zadanie",
+    getCurrentLocation: "Pobierz moją pozycję",
+    latitude: "Szerokość (Lat)",
+    longitude: "Długość (Lng)",
+    locationSuccess: "Pozycja zapisana!",
+    locationError: "Błąd pobierania pozycji. Sprawdź GPS.",
+    distanceToTarget: "Dystans do celu",
+    pointReached: "Punkt osiągnięty! Brawo!",
+    meters: "m",
+    gpsThreshold: "Dokładność (promień)",
+    gpsViewMode: "Tryb widoku",
+    radar: "Radar",
+    map: "Mapa",
+    satellite: "Satelita",
+    accuracyHint: "Jak blisko celu trzeba się znaleźć (np. 5m dla małych obszarów, 20m dla miasta).",
+    viewModeHint: "Radar pokazuje tylko dystans. Mapa i Satelita pokazują Twoją pozycję i trasę.",
   },
   en: {
-    title: "Easter Adventure",
-    subtitle: "Epic Outdoor Game for children, youth and adults, hide eggs, create adventures, make your children have great fun during the holidays!",
+    title: "Mystery Trail",
+    subtitle: "Epic outdoor game for children, youth, and adults. Create unforgettable adventures, solve riddles, and find the hidden treasure!",
     start: "START!",
-    welcome: "Welcome! Solve riddles, scan codes, and complete tasks to find the treasure!",
+    welcome: "Welcome to the Mystery Trail! Solve riddles, scan codes, and complete tasks to reach the goal!",
     downloadGame: "Enter existing game number",
     enterCode: "Enter 6-character game code",
     cancel: "Cancel",
@@ -266,18 +284,18 @@ export const TRANSLATIONS: Record<Language, any> = {
     helpStep2: "Create a route and add points",
     helpStep2Desc: "Add steps to the adventure. For each point, you can attach a photo hinting at the location (e.g., a photo of a tree), write a riddle, and set a task to perform.",
     helpStep3: "Choose verification method",
-    helpStep3Desc: "When creating a game, choose whether children should scan QR codes or enter passcodes. If you don't have a printer, passcodes are a perfect alternative - you can write them on eggs or notes.",
+    helpStep3Desc: "When creating a game, choose whether children should scan QR codes or enter passcodes. If you don't have a printer, passcodes are a perfect alternative - you can write them on notes or hide them in envelopes.",
     helpStep4: "Tasks and effort evaluation",
-    helpStep4Desc: "Children can confirm tasks by taking a photo or recording their singing. You can also enable the evaluation option – at the end of the game, you'll choose who tried hardest, and the app will give them a special mention!",
+    helpStep4Desc: "Children can confirm tasks by taking a photo or recording their voice. You can also enable the evaluation option – at the end of the game, you'll choose who tried hardest, and the app will give them a special mention!",
     helpStep5: "Share and play!",
     helpStep5Desc: "You can share your finished game with other parents via QR code or link. Children scan codes or enter passcodes, solve riddles, and earn points on their way to the treasure!",
     helpExampleTitle: "Step Example:",
-    helpExampleHint: "Riddle: 'I've been growing in this garden the longest, I'm the biggest and look down on everyone. Someone hid an egg at my root – find it, and I'll tell you what to do next!'",
-    helpExampleTask: "Task: 'Sing a happy song about a bunny together!'",
+    helpExampleHint: "Riddle: 'I've been growing in this garden the longest, I'm the biggest and look down on everyone. Someone hid a clue at my root – find it, and I'll tell you what to do next!'",
+    helpExampleTask: "Task: 'Sing a happy song about an adventure together!'",
     createNewGame: "CREATE NEW GAME",
     close: "Close",
     passcode: "Passcode (instead of QR)",
-    enterPasscode: "Enter passcode from the egg",
+    enterPasscode: "Enter passcode from the clue",
     passcodePlaceholder: "e.g. STEP1",
     wrongPasscode: "Wrong passcode! Try again.",
     orEnterPasscode: "or enter passcode",
@@ -285,7 +303,25 @@ export const TRANSLATIONS: Record<Language, any> = {
     verificationMethod: "Verification method",
     qrMethod: "QR Codes (scanning)",
     passcodeMethod: "Passcodes (typing)",
-    methodWarning: "Changing method will clear current passcode settings!",
+    gpsMethod: "GPS (location)",
+    methodWarning: "Changing method will clear current verification settings!",
+    scannerHint: "Scan the QR code to proceed",
+    gpsHint: "Reach the destination to unlock the task",
+    getCurrentLocation: "Get my position",
+    latitude: "Latitude",
+    longitude: "Longitude",
+    locationSuccess: "Position saved!",
+    locationError: "Error getting position. Check GPS.",
+    distanceToTarget: "Distance to target",
+    pointReached: "Point reached! Well done!",
+    meters: "m",
+    gpsThreshold: "Accuracy (radius)",
+    gpsViewMode: "View mode",
+    radar: "Radar",
+    map: "Map",
+    satellite: "Satellite",
+    accuracyHint: "How close to the target you need to get (e.g., 5m for small areas, 20m for city).",
+    viewModeHint: "Radar shows only distance. Map and Satellite show your position and route.",
   }
 };
 import { doc, setDoc, getDoc, collection, query, where, getDocs, limit, orderBy, writeBatch } from 'firebase/firestore';
@@ -312,9 +348,9 @@ export const DEFAULT_CHECKPOINTS: Checkpoint[] = [
   }
 ];
 
-export const STORAGE_KEY = 'easter_egg_hunt_config';
-export const GAME_ID_KEY = 'easter_egg_hunt_id';
-export const PARENT_ID_KEY = 'easter_egg_hunt_parent_id';
+export const STORAGE_KEY = 'mystery_trail_config';
+export const GAME_ID_KEY = 'mystery_trail_id';
+export const PARENT_ID_KEY = 'mystery_trail_parent_id';
 
 export const generateGameId = () => {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -324,7 +360,13 @@ export const getParentId = () => {
   return auth.currentUser?.uid || null;
 };
 
-export const saveGameToFirebase = async (gameId: string, checkpoints: Checkpoint[], verificationMethod: 'qr' | 'passcode' = 'qr'): Promise<string> => {
+export const saveGameToFirebase = async (
+  gameId: string, 
+  checkpoints: Checkpoint[], 
+  verificationMethod: 'qr' | 'passcode' | 'gps' = 'qr',
+  gpsThreshold: number = 20,
+  gpsViewMode: 'radar' | 'map' | 'satellite' = 'radar'
+): Promise<string> => {
   const path = `games/${gameId}`;
   try {
     const parentId = getParentId();
@@ -349,7 +391,9 @@ export const saveGameToFirebase = async (gameId: string, checkpoints: Checkpoint
       parentId,
       checkpoints,
       createdAt: Date.now(),
-      verificationMethod
+      verificationMethod,
+      gpsThreshold,
+      gpsViewMode
     });
     return targetId;
   } catch (error) {
@@ -402,25 +446,44 @@ export const loadGameFromFirebase = async (gameId: string): Promise<GameData | n
 
 export const saveSessionToFirebase = async (session: GameSession) => {
   const path = `sessions/${session.id}`;
+  console.log(`[Firestore] Starting saveSessionToFirebase for session: ${session.id}`);
   try {
     const { results, ...sessionData } = session;
     const sessionRef = doc(db, 'sessions', session.id);
     
-    // Save session metadata
+    console.log(`[Firestore] Saving session metadata to: ${path}`, sessionData);
+    // Save session metadata first
     await setDoc(sessionRef, sessionData);
+    console.log(`[Firestore] Session metadata saved successfully.`);
     
-    // Save each result as a separate document in a sub-collection
+    // Save each result individually to avoid batch size limits (10MB)
+    // and to handle individual document size limits (1MB)
     if (results && results.length > 0) {
-      const batch = writeBatch(db);
-      results.forEach((result, index) => {
-        // We use a predictable ID for the result to avoid duplicates if retried
-        const resultId = `${session.id}_res_${index}`;
+      console.log(`[Firestore] Saving ${results.length} results to sub-collection...`);
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        const resultId = `${session.id}_res_${i}`;
         const resultRef = doc(db, `sessions/${session.id}/results`, resultId);
-        batch.set(resultRef, result);
-      });
-      await batch.commit();
+        
+        console.log(`[Firestore] Saving result ${i} to: sessions/${session.id}/results/${resultId}`);
+        try {
+          // Check result size roughly
+          const size = JSON.stringify(result).length;
+          console.log(`[Firestore] Result ${i} approximate size: ${Math.round(size / 1024)} KB`);
+          
+          await setDoc(resultRef, result);
+          console.log(`[Firestore] Result ${i} saved successfully.`);
+        } catch (itemError: any) {
+          console.error(`[Firestore] Could not save result ${i} (likely size limit or permission):`, itemError);
+          // We continue saving other results even if one fails
+        }
+      }
+    } else {
+      console.log(`[Firestore] No results to save for this session.`);
     }
+    console.log(`[Firestore] Session save process completed.`);
   } catch (error) {
+    console.error(`[Firestore] Critical error saving session:`, error);
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 };
