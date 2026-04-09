@@ -668,7 +668,7 @@ export default function App() {
           <div className="bg-amber-400 p-2 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.4)]">
             <Archive className="text-slate-950" size={24} />
           </div>
-          <h1 className="text-lg sm:text-xl font-serif font-bold text-amber-400 tracking-tight truncate max-w-[150px] sm:max-w-none uppercase">
+          <h1 className="text-lg sm:text-xl font-serif font-black text-amber-400 tracking-widest truncate max-w-[150px] sm:max-w-none uppercase">
             {t.title}
           </h1>
         </div>
@@ -777,7 +777,7 @@ export default function App() {
                 </motion.div>
               </div>
               
-              <h2 className="text-4xl font-serif font-black text-amber-400 uppercase tracking-tighter">{t.title}</h2>
+              <h2 className="text-4xl sm:text-5xl font-serif font-black text-amber-400 uppercase tracking-[0.1em] drop-shadow-[0_2px_10px_rgba(251,191,36,0.3)]">{t.title}</h2>
               <p className="text-sm text-slate-400 font-medium mt-1 mb-4 leading-relaxed max-w-xs mx-auto">
                 {t.subtitle}
               </p>
