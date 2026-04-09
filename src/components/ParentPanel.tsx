@@ -25,7 +25,9 @@ import {
   Mail,
   Lock,
   QrCode,
-  MapPin
+  MapPin,
+  HelpCircle,
+  Archive
 } from 'lucide-react';
 import { loadSessionsFromFirebase, loadUserGamesFromFirebase, loadSessionResults, saveSessionToFirebase, generateGameId, GAME_ID_KEY, PARENT_ID_KEY, TRANSLATIONS } from '../constants';
 import { GameSession, GameData, Language } from '../types';
@@ -49,13 +51,17 @@ interface ParentPanelProps {
   verificationMethod: 'qr' | 'passcode' | 'gps';
   gpsThreshold?: number;
   gpsViewMode?: 'radar' | 'map' | 'satellite';
+  timeLimit?: number;
+  extraTimeLimit?: number;
   onUpdate: (
     newCheckpoints: Checkpoint[], 
     newGameId: string, 
     newMethod: 'qr' | 'passcode' | 'gps', 
     newParentId: string,
     gpsThreshold?: number,
-    gpsViewMode?: 'radar' | 'map' | 'satellite'
+    gpsViewMode?: 'radar' | 'map' | 'satellite',
+    timeLimit?: number,
+    extraTimeLimit?: number
   ) => void;
   onPrint: () => void;
   onClose: () => void;
@@ -68,6 +74,8 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
   verificationMethod, 
   gpsThreshold = 20,
   gpsViewMode = 'radar',
+  timeLimit = 0,
+  extraTimeLimit = 0,
   onUpdate, 
   onPrint, 
   onClose 
@@ -78,6 +86,9 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
   const [localMethod, setLocalMethod] = useState<'qr' | 'passcode' | 'gps'>(verificationMethod);
   const [localGpsThreshold, setLocalGpsThreshold] = useState<number>(gpsThreshold);
   const [localGpsViewMode, setLocalGpsViewMode] = useState<'radar' | 'map' | 'satellite'>(gpsViewMode);
+  const [localTimeLimit, setLocalTimeLimit] = useState<number>(timeLimit);
+  const [localExtraTimeLimit, setLocalExtraTimeLimit] = useState<number>(extraTimeLimit);
+  const [isTimePressure, setIsTimePressure] = useState<boolean>(timeLimit > 0);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'config' | 'history' | 'my-games'>('config');
@@ -115,6 +126,15 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
   useEffect(() => {
     setLocalGpsViewMode(gpsViewMode);
   }, [gpsViewMode]);
+
+  useEffect(() => {
+    setLocalTimeLimit(timeLimit);
+    setIsTimePressure(timeLimit > 0);
+  }, [timeLimit]);
+
+  useEffect(() => {
+    setLocalExtraTimeLimit(extraTimeLimit);
+  }, [extraTimeLimit]);
   
   // Auth state
   const [zoomImage, setZoomImage] = useState<string | null>(null);
@@ -539,6 +559,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
     setIsSaving(true);
     try {
       const savedId = await saveGameToFirebase(gameId, localCheckpoints, localMethod, localGpsThreshold, localGpsViewMode);
+      // Update with time limits
       const parentId = user?.uid || '';
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localCheckpoints));
       localStorage.setItem('mystery_trail_method', localMethod);
@@ -546,7 +567,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
       localStorage.setItem('mystery_trail_gps_view_mode', localGpsViewMode);
       localStorage.setItem(GAME_ID_KEY, savedId);
       localStorage.setItem(PARENT_ID_KEY, parentId);
-      onUpdate(localCheckpoints, savedId, localMethod, parentId, localGpsThreshold, localGpsViewMode);
+      onUpdate(localCheckpoints, savedId, localMethod, parentId, localGpsThreshold, localGpsViewMode, localTimeLimit, localExtraTimeLimit);
       showToast(t.savedSuccess + savedId, 'success');
       onClose();
     } catch (error: any) {
@@ -768,7 +789,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
               {/* Verification Method Selection */}
               <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 mb-4 shadow-xl">
                 <label className="block text-[10px] font-black text-slate-500 uppercase mb-3 tracking-widest">{t.verificationMethod}</label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button 
                     onClick={() => {
                       if (localMethod === 'passcode' && localCheckpoints.some(cp => cp.passcode)) {
@@ -857,6 +878,78 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
                   </motion.div>
                 )}
               </div>
+
+              {/* Time Limits */}
+              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 mb-4 shadow-xl space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Archive size={16} className="text-amber-400" />
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.timePressure}</label>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const newState = !isTimePressure;
+                      setIsTimePressure(newState);
+                      if (!newState) {
+                        setLocalTimeLimit(0);
+                        setLocalExtraTimeLimit(0);
+                      } else {
+                        setLocalTimeLimit(30);
+                        setLocalExtraTimeLimit(15);
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border ${
+                      isTimePressure 
+                        ? 'bg-amber-400 border-amber-400 text-slate-950' 
+                        : 'bg-slate-800 border-slate-700 text-slate-500'
+                    }`}
+                  >
+                    {isTimePressure ? t.timePressureEnabled : t.timePressureDisabled}
+                  </button>
+                </div>
+                
+                {isTimePressure && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.timeLimit}</label>
+                        <span className="text-[10px] font-black text-amber-400 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700 uppercase tracking-widest">{localTimeLimit} min</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="5" 
+                        max="120" 
+                        step="5"
+                        value={localTimeLimit}
+                        onChange={(e) => setLocalTimeLimit(parseInt(e.target.value))}
+                        className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                      />
+                      <p className="text-[10px] text-slate-600 italic uppercase tracking-widest">{t.timeLimitHint}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.extraTime}</label>
+                        <span className="text-[10px] font-black text-orange-500 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700 uppercase tracking-widest">{localExtraTimeLimit} min</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="60" 
+                        step="5"
+                        value={localExtraTimeLimit}
+                        onChange={(e) => setLocalExtraTimeLimit(parseInt(e.target.value))}
+                        className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                      />
+                      <p className="text-[10px] text-slate-600 italic uppercase tracking-widest">{t.extraTimeHint}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
               {localCheckpoints.length === 0 && (
                 <div className="text-center py-8 text-slate-600">
                   <AlertCircle size={40} className="mx-auto mb-3 opacity-20" />
@@ -890,7 +983,16 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
                             value={cp.hint}
                             onChange={(e) => updateCheckpoint(cp.id, { hint: e.target.value })}
                             className="w-full p-2.5 text-sm font-medium rounded-lg border-2 border-slate-800 focus:border-amber-400 focus:bg-slate-950 bg-slate-950 text-slate-300 outline-none transition-all h-16 resize-none shadow-inner"
-                            placeholder={language === 'pl' ? 'Podpowiedź dla dzieci...' : 'Hint for children...'}
+                            placeholder={language === 'pl' ? 'Podpowiedź dla Graczy...' : 'Hint for Players...'}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-500 uppercase mb-0.5 ml-1 tracking-widest">{t.extraHint}</label>
+                          <textarea 
+                            value={cp.extraHint || ''}
+                            onChange={(e) => updateCheckpoint(cp.id, { extraHint: e.target.value })}
+                            className="w-full p-2.5 text-sm font-medium rounded-lg border-2 border-slate-800 focus:border-amber-400 focus:bg-slate-950 bg-slate-950 text-slate-300 outline-none transition-all h-12 resize-none shadow-inner"
+                            placeholder={language === 'pl' ? 'Dodatkowa podpowiedź (płatna -1 pkt)...' : 'Extra hint (costs -1 pt)...'}
                           />
                         </div>
                         <div>
@@ -950,6 +1052,76 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
                             </div>
                           </div>
                         )}
+                        {cp.requireAnswer && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="mt-3 p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-3 shadow-inner"
+                          >
+                            <div className="flex gap-2">
+                              {(['text', 'choice'] as const).map((type) => (
+                                <button
+                                  key={type}
+                                  onClick={() => updateCheckpoint(cp.id, { answerType: type })}
+                                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border-2 ${
+                                    cp.answerType === type 
+                                      ? 'bg-cyan-500 border-cyan-500 text-slate-950' 
+                                      : 'bg-slate-900 border-slate-800 text-slate-500'
+                                  }`}
+                                >
+                                  {type === 'text' ? t.textAnswer : t.choiceAnswer}
+                                </button>
+                              ))}
+                            </div>
+
+                            {cp.answerType === 'text' ? (
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-500 uppercase mb-1 ml-1 tracking-widest">{t.correctAnswer}</label>
+                                <input 
+                                  type="text" 
+                                  value={cp.correctAnswer || ''}
+                                  onChange={(e) => updateCheckpoint(cp.id, { correctAnswer: e.target.value })}
+                                  className="w-full p-2 text-sm font-bold rounded-lg border-2 border-slate-800 focus:border-cyan-400 focus:bg-slate-950 bg-slate-950 text-cyan-400 outline-none transition-all shadow-inner"
+                                  placeholder={t.enterAnswer}
+                                />
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <label className="block text-[9px] font-black text-slate-500 uppercase mb-1 ml-1 tracking-widest">{t.choiceAnswer} (A, B, C, D)</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {['A', 'B', 'C', 'D'].map((label, idx) => (
+                                    <div key={label} className="flex flex-col gap-1">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] font-black text-slate-600">{label}</span>
+                                        <input 
+                                          type="text" 
+                                          value={cp.choices?.[idx] || ''}
+                                          onChange={(e) => {
+                                            const newChoices = [...(cp.choices || ['', '', '', ''])];
+                                            newChoices[idx] = e.target.value;
+                                            updateCheckpoint(cp.id, { choices: newChoices });
+                                          }}
+                                          className="flex-1 p-1.5 text-xs font-bold rounded-lg border-2 border-slate-800 focus:border-cyan-400 focus:bg-slate-950 bg-slate-950 text-slate-300 outline-none transition-all"
+                                          placeholder="..."
+                                        />
+                                      </div>
+                                      <button
+                                        onClick={() => updateCheckpoint(cp.id, { correctAnswer: label })}
+                                        className={`py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all border ${
+                                          cp.correctAnswer === label 
+                                            ? 'bg-cyan-500 border-cyan-500 text-slate-950' 
+                                            : 'bg-slate-900 border-slate-800 text-slate-600'
+                                        }`}
+                                      >
+                                        {t.correctChoice}
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -985,6 +1157,22 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
                         >
                           <Mic size={14} />
                           {cp.requireAudio ? t.audioRequired : t.audioNotRequired}
+                        </button>
+                        <button 
+                          onClick={() => updateCheckpoint(cp.id, { 
+                            requireAnswer: !cp.requireAnswer,
+                            answerType: cp.requireAnswer ? undefined : 'text',
+                            correctAnswer: cp.requireAnswer ? undefined : '',
+                            choices: cp.requireAnswer ? undefined : ['', '', '', '']
+                          })}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 font-black text-[10px] uppercase tracking-widest transition-all ${
+                            cp.requireAnswer 
+                              ? 'bg-cyan-500 border-cyan-500 text-slate-950 shadow-md' 
+                              : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-cyan-400/30'
+                          }`}
+                        >
+                          <HelpCircle size={14} />
+                          {cp.requireAnswer ? t.answerRequired : t.answerNotRequired}
                         </button>
                         <div className="px-2 py-1 bg-slate-800 text-amber-400 rounded-lg border border-slate-700 font-mono font-black text-[10px] uppercase tracking-widest">
                           {t.qrNumber}{cp.qrNumber}

@@ -4,11 +4,16 @@ export interface Checkpoint {
   id: string;
   name: string;
   hint: string;
+  extraHint?: string;
   image?: string; // base64
   task: string;
   requirePhoto: boolean;
   requireAudio?: boolean;
   requireEvaluation?: boolean;
+  requireAnswer?: boolean;
+  answerType?: 'text' | 'choice';
+  correctAnswer?: string;
+  choices?: string[];
   qrNumber: number; // 1-30
   passcode?: string;
   lat?: number;
@@ -45,4 +50,6 @@ export interface GameData {
   verificationMethod?: 'qr' | 'passcode' | 'gps';
   gpsThreshold?: number; // in meters
   gpsViewMode?: 'radar' | 'map' | 'satellite';
+  timeLimit?: number; // in minutes
+  extraTimeLimit?: number; // in minutes
 }

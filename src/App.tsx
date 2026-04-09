@@ -33,7 +33,8 @@ import {
   X,
   ChevronRight,
   Archive,
-  MapPin
+  MapPin,
+  Info
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { QRCodeSVG } from 'qrcode.react';
@@ -62,6 +63,8 @@ export default function App() {
   const [verificationMethod, setVerificationMethod] = useState<'qr' | 'passcode' | 'gps'>('qr');
   const [gpsThreshold, setGpsThreshold] = useState<number>(20);
   const [gpsViewMode, setGpsViewMode] = useState<'radar' | 'map' | 'satellite'>('radar');
+  const [timeLimit, setTimeLimit] = useState<number>(0);
+  const [extraTimeLimit, setExtraTimeLimit] = useState<number>(0);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [gameId, setGameId] = useState<string>('');
   const [gameParentId, setGameParentId] = useState<string>('');
@@ -83,6 +86,18 @@ export default function App() {
   const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
   const [showShareQR, setShowShareQR] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  const [taskAnswerInput, setTaskAnswerInput] = useState('');
+  const [failedTaskAttempts, setFailedTaskAttempts] = useState(0);
+  const [isTaskAnswerCorrect, setIsTaskAnswerCorrect] = useState(false);
+
+  const [score, setScore] = useState(0);
+  const [maxPossibleScore, setMaxPossibleScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [isExtraTime, setIsExtraTime] = useState(false);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [isHintUsed, setIsHintUsed] = useState(false);
 
   // Toast and Confirm state
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -297,6 +312,29 @@ export default function App() {
     setCurrentStageIndex(0);
     setCapturedPhoto(null);
     setRecordedAudio(null);
+    setTaskAnswerInput('');
+    setFailedTaskAttempts(0);
+    setIsTaskAnswerCorrect(false);
+    
+    // Initialize scoring and timer
+    setScore(0);
+    const possible = checkpoints.reduce((acc, cp) => {
+      let p = 1; // 1 point for reaching step
+      if (cp.requirePhoto) p += 1;
+      if (cp.requireAudio) p += 1;
+      if (cp.requireAnswer) p += 1;
+      return acc + p;
+    }, 0);
+    setMaxPossibleScore(possible);
+    
+    if (timeLimit > 0) {
+      setTimeLeft(timeLimit * 60);
+      setIsExtraTime(false);
+      setIsGameOver(false);
+      setStartTime(Date.now());
+    } else {
+      setTimeLeft(null);
+    }
   };
 
   const updateMember = (index: number, name: string) => {
@@ -399,7 +437,81 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    let timer: number;
+    if (timeLeft !== null && timeLeft > 0 && gameState !== 'FINISHED' && gameState !== 'START' && !isGameOver) {
+      timer = window.setInterval(() => {
+        setTimeLeft(prev => (prev !== null ? prev - 1 : null));
+      }, 1000);
+    } else if (timeLeft === 0 && !isGameOver) {
+      if (!isExtraTime && extraTimeLimit > 0) {
+        setIsExtraTime(true);
+        setTimeLeft(extraTimeLimit * 60);
+        showToast(t.extraTimeActive, 'info');
+      } else {
+        setIsGameOver(true);
+        setGameState('FINISHED');
+        showToast(t.gameOver, 'error');
+      }
+    }
+    return () => clearInterval(timer);
+  }, [timeLeft, isExtraTime, extraTimeLimit, gameState, isGameOver, t.extraTimeActive, t.gameOver]);
+
+  const handleAnswerSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!currentStage.correctAnswer) return;
+
+    const correct = currentStage.correctAnswer.trim().toUpperCase();
+    const input = taskAnswerInput.trim().toUpperCase();
+
+    if (input === correct) {
+      setIsTaskAnswerCorrect(true);
+      showToast(t.pointReached, 'success');
+      confetti({
+        particleCount: 40,
+        spread: 50,
+        origin: { y: 0.7 }
+      });
+    } else {
+      const newAttempts = failedTaskAttempts + 1;
+      setFailedTaskAttempts(newAttempts);
+      if (newAttempts >= 5) {
+        showToast(t.attemptsExhausted, 'info');
+      } else {
+        showToast(`${t.wrongAnswer}${5 - newAttempts}`, 'error');
+      }
+    }
+  };
+
+  const handleChoiceSubmit = (choice: string) => {
+    if (choice === currentStage.correctAnswer) {
+      setIsTaskAnswerCorrect(true);
+      showToast(t.pointReached, 'success');
+      confetti({
+        particleCount: 40,
+        spread: 50,
+        origin: { y: 0.7 }
+      });
+    } else {
+      const newAttempts = failedTaskAttempts + 1;
+      setFailedTaskAttempts(newAttempts);
+      if (newAttempts >= 5) {
+        showToast(t.attemptsExhausted, 'info');
+      } else {
+        showToast(`${t.wrongAnswer}${5 - newAttempts}`, 'error');
+      }
+    }
+  };
+
   const nextStage = () => {
+    // Calculate points for this stage
+    let stagePoints = 1; // 1 point for reaching
+    if (currentStage.requirePhoto && capturedPhoto) stagePoints += 1;
+    if (currentStage.requireAudio && recordedAudio) stagePoints += 1;
+    if (currentStage.requireAnswer && isTaskAnswerCorrect) stagePoints += 1;
+    
+    setScore(prev => prev + stagePoints);
+
     // Save current result to session
     const currentResult: CheckpointResult = {
       checkpointId: checkpoints[currentStageIndex].id,
@@ -415,6 +527,10 @@ export default function App() {
       setCapturedPhoto(null);
       setRecordedAudio(null);
       setBestPerformer(null);
+      setTaskAnswerInput('');
+      setFailedTaskAttempts(0);
+      setIsTaskAnswerCorrect(false);
+      setIsHintUsed(false);
     } else {
       handleFinish([...sessionResults, currentResult]);
     }
@@ -430,6 +546,19 @@ export default function App() {
       [bestPerformer]: (prev[bestPerformer] || 0) + 1
     }));
     nextStage();
+  };
+
+  const handleUseHint = () => {
+    if (!currentStage.extraHint || isHintUsed) return;
+    
+    handleConfirm(
+      t.useExtraHint,
+      t.extraHintWarning,
+      () => {
+        setIsHintUsed(true);
+        setScore(prev => prev - 1);
+      }
+    );
   };
 
   const handleFinish = async (finalResults: CheckpointResult[]) => {
@@ -501,6 +630,32 @@ export default function App() {
     }
   };
 
+  const handleUpdate = (
+    newCheckpoints: Checkpoint[], 
+    newId: string, 
+    newMethod: 'qr' | 'passcode' | 'gps', 
+    newParentId: string,
+    newThreshold?: number,
+    newViewMode?: 'radar' | 'map' | 'satellite',
+    newTimeLimit?: number,
+    newExtraTimeLimit?: number
+  ) => {
+    setCheckpoints(newCheckpoints);
+    setGameId(newId);
+    setVerificationMethod(newMethod);
+    setGameParentId(newParentId);
+    if (newThreshold !== undefined) setGpsThreshold(newThreshold);
+    if (newViewMode !== undefined) setGpsViewMode(newViewMode);
+    if (newTimeLimit !== undefined) {
+      setTimeLimit(newTimeLimit);
+      localStorage.setItem('mystery_trail_time_limit', newTimeLimit.toString());
+    }
+    if (newExtraTimeLimit !== undefined) {
+      setExtraTimeLimit(newExtraTimeLimit);
+      localStorage.setItem('mystery_trail_extra_time_limit', newExtraTimeLimit.toString());
+    }
+  };
+
   if (gameState === 'PRINT' && showParentPanel) {
     return <PrintPage onBack={() => setGameState('START')} language={language} checkpoints={checkpoints} gameId={gameId} />;
   }
@@ -560,7 +715,30 @@ export default function App() {
         </div>
       </header>
 
-      <main className="w-full max-w-xl flex-1 flex flex-col justify-center">
+      <main className="w-full max-w-xl flex-1 flex flex-col justify-center relative">
+        {/* Score and Timer Overlay */}
+        {(gameState === 'RIDDLE' || gameState === 'SCANNING' || gameState === 'TASK' || gameState === 'EVALUATION') && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 flex gap-2">
+            <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <Trophy size={16} className="text-amber-400" />
+                <span className="text-sm font-black text-white">{score}</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase">{t.totalPossible} {maxPossibleScore}</span>
+              </div>
+              {timeLeft !== null && (
+                <>
+                  <div className="w-px h-4 bg-slate-800" />
+                  <div className="flex items-center gap-1.5">
+                    <Archive size={16} className={isExtraTime ? "text-orange-500 animate-pulse" : "text-cyan-400"} />
+                    <span className={`text-sm font-mono font-black ${isExtraTime ? "text-orange-500" : "text-cyan-400"}`}>
+                      {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {gameState === 'START' && (
             <motion.div 
@@ -606,6 +784,71 @@ export default function App() {
               <p className="text-lg text-slate-300 font-light">
                 {checkpoints.length > 0 ? t.welcome : t.firstGame}
               </p>
+              
+              {checkpoints.length > 0 && (
+                <div className="bg-slate-950/50 rounded-2xl p-4 border border-slate-800 text-left space-y-3">
+                  <div className="flex items-center gap-2 border-b border-slate-800 pb-2 mb-2">
+                    <Info size={14} className="text-amber-400" />
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.gameDetails}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        {verificationMethod === 'qr' ? <Camera size={14} className="text-cyan-400" /> : 
+                         verificationMethod === 'passcode' ? <Lock size={14} className="text-cyan-400" /> : 
+                         <MapPin size={14} className="text-cyan-400" />}
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">{t.verification}</span>
+                          <span className="text-xs font-bold text-slate-300 uppercase">
+                            {verificationMethod === 'qr' ? t.scanQR : 
+                             verificationMethod === 'passcode' ? t.passcode : 
+                             t.gpsMethod}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Archive size={14} className="text-amber-400" />
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">{t.timeLimit}</span>
+                          <span className="text-xs font-bold text-slate-300 uppercase">
+                            {timeLimit > 0 ? `${timeLimit} min` : t.noTimeLimit}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy size={14} className="text-orange-500" />
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">{t.score}</span>
+                          <span className="text-xs font-bold text-slate-300 uppercase">
+                            {checkpoints.reduce((acc, cp) => {
+                              let p = 1;
+                              if (cp.requirePhoto) p += 1;
+                              if (cp.requireAudio) p += 1;
+                              if (cp.requireAnswer) p += 1;
+                              return acc + p;
+                            }, 0)} {t.points}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <HelpCircle size={14} className="text-amber-400" />
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">{t.extraHintsLabel}</span>
+                          <span className="text-xs font-bold text-slate-300 uppercase">
+                            {checkpoints.some(cp => cp.extraHint) ? t.available : t.notAvailable}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {checkpoints.length > 0 ? (
                 <button 
@@ -704,17 +947,45 @@ export default function App() {
                   <HelpCircle size={28} />
                   <span className="font-bold tracking-widest uppercase text-sm">{t.riddle} #{currentStageIndex + 1}</span>
                 </div>
-                <button 
-                  onClick={() => speak(currentStage.hint)}
-                  className="p-3 bg-slate-800 text-amber-400 rounded-full hover:bg-slate-700 transition-colors border border-slate-700"
-                >
-                  <Volume2 size={24} />
-                </button>
+                <div className="flex gap-2">
+                  {currentStage.extraHint && (
+                    <button 
+                      onClick={handleUseHint}
+                      className={`p-3 rounded-full transition-all border ${
+                        isHintUsed 
+                          ? 'bg-amber-400 text-slate-950 border-amber-400' 
+                          : 'bg-slate-800 text-amber-400 border-slate-700 hover:bg-slate-700'
+                      }`}
+                      title={t.extraHint}
+                    >
+                      <HelpCircle size={24} />
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => speak(currentStage.hint)}
+                    className="p-3 bg-slate-800 text-amber-400 rounded-full hover:bg-slate-700 transition-colors border border-slate-700"
+                  >
+                    <Volume2 size={24} />
+                  </button>
+                </div>
               </div>
               
               <h3 className="text-2xl font-serif font-bold text-slate-100 leading-tight">
                 {currentStage.hint}
               </h3>
+
+              {isHintUsed && currentStage.extraHint && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-amber-400/10 border-2 border-amber-400/30 rounded-2xl"
+                >
+                  <p className="text-amber-400 font-bold italic text-sm">
+                    <span className="font-black uppercase mr-2">{t.extraHint}:</span>
+                    {currentStage.extraHint}
+                  </p>
+                </motion.div>
+              )}
 
               {currentStage.image && (
                 <div className="rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl">
@@ -876,18 +1147,46 @@ export default function App() {
                 <div className="bg-orange-600/20 w-12 h-12 rounded-full flex items-center justify-center border border-orange-600/30">
                   <Users className="text-orange-500" size={24} />
                 </div>
-                <button 
-                  onClick={() => speak(currentStage.task)}
-                  className="p-3 bg-slate-800 text-amber-400 rounded-full hover:bg-slate-700 transition-colors border border-slate-700"
-                >
-                  <Volume2 size={24} />
-                </button>
+                <div className="flex gap-2">
+                  {currentStage.extraHint && (
+                    <button 
+                      onClick={handleUseHint}
+                      className={`p-3 rounded-full transition-all border ${
+                        isHintUsed 
+                          ? 'bg-amber-400 text-slate-950 border-amber-400' 
+                          : 'bg-slate-800 text-amber-400 border-slate-700 hover:bg-slate-700'
+                      }`}
+                      title={t.extraHint}
+                    >
+                      <HelpCircle size={24} />
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => speak(currentStage.task)}
+                    className="p-3 bg-slate-800 text-amber-400 rounded-full hover:bg-slate-700 transition-colors border border-slate-700"
+                  >
+                    <Volume2 size={24} />
+                  </button>
+                </div>
               </div>
               
               <h3 className="text-2xl font-serif font-black text-orange-500 uppercase tracking-tight">{t.task}</h3>
               <p className="text-lg text-slate-200 font-medium">
                 {currentStage.task}
               </p>
+
+              {isHintUsed && currentStage.extraHint && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-amber-400/10 border-2 border-amber-400/30 rounded-2xl"
+                >
+                  <p className="text-amber-400 font-bold italic text-sm">
+                    <span className="font-black uppercase mr-2">{t.extraHint}:</span>
+                    {currentStage.extraHint}
+                  </p>
+                </motion.div>
+              )}
 
               {currentStage.requirePhoto && (
                 <div className="space-y-4">
@@ -960,6 +1259,56 @@ export default function App() {
                 </div>
               )}
 
+              {currentStage.requireAnswer && (
+                <div className="space-y-4 pt-4 border-t border-slate-800">
+                  <div className="flex items-center justify-center gap-2 text-cyan-400">
+                    <HelpCircle size={18} />
+                    <p className="text-xs font-black uppercase tracking-widest">{t.answerRequired}</p>
+                  </div>
+                  
+                  {failedTaskAttempts >= 5 ? (
+                    <div className="p-4 bg-slate-950 rounded-2xl border-2 border-slate-800 text-slate-400 font-bold text-sm italic">
+                      {t.attemptsExhausted}
+                    </div>
+                  ) : isTaskAnswerCorrect ? (
+                    <div className="p-4 bg-cyan-400/10 rounded-2xl border-2 border-cyan-400/30 text-cyan-400 font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                      <CheckCircle2 size={20} /> {t.pointReached}
+                    </div>
+                  ) : currentStage.answerType === 'text' ? (
+                    <form onSubmit={handleAnswerSubmit} className="space-y-3">
+                      <input 
+                        type="text"
+                        value={taskAnswerInput}
+                        onChange={(e) => setTaskAnswerInput(e.target.value)}
+                        className="w-full p-4 bg-slate-950 border-2 border-slate-800 rounded-xl focus:border-cyan-400 outline-none font-black text-lg text-center uppercase text-cyan-400 transition-all shadow-inner"
+                        placeholder={t.enterAnswer}
+                      />
+                      <button 
+                        type="submit"
+                        className="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black rounded-xl shadow-md transition-all uppercase tracking-widest"
+                      >
+                        {t.checkAnswer}
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {['A', 'B', 'C', 'D'].map((label, idx) => (
+                        <button
+                          key={label}
+                          onClick={() => handleChoiceSubmit(label)}
+                          className="p-4 bg-slate-950 border-2 border-slate-800 rounded-2xl hover:border-cyan-400/50 transition-all flex flex-col items-center gap-1 group"
+                        >
+                          <span className="text-2xl font-black text-cyan-400 group-hover:scale-110 transition-transform">{label}</span>
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight truncate w-full">
+                            {currentStage.choices?.[idx] || `Option ${label}`}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button 
                 onClick={() => {
                   if (currentStage.requirePhoto && !capturedPhoto) {
@@ -970,6 +1319,10 @@ export default function App() {
                     showToast(t.errorMic, 'error');
                     return;
                   }
+                  if (currentStage.requireAnswer && !isTaskAnswerCorrect && failedTaskAttempts < 5) {
+                    showToast(t.enterAnswer, 'error');
+                    return;
+                  }
                   if (currentStage.requireEvaluation) {
                     setGameState('EVALUATION');
                     setBestPerformer(null);
@@ -978,7 +1331,9 @@ export default function App() {
                   }
                 }}
                 className={`w-full py-4 text-slate-950 text-lg font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 uppercase tracking-widest ${
-                  (currentStage.requirePhoto && !capturedPhoto) || (currentStage.requireAudio && !recordedAudio)
+                  (currentStage.requirePhoto && !capturedPhoto) || 
+                  (currentStage.requireAudio && !recordedAudio) ||
+                  (currentStage.requireAnswer && !isTaskAnswerCorrect && failedTaskAttempts < 5)
                     ? 'bg-slate-800 text-slate-600 cursor-not-allowed' 
                     : 'bg-amber-400 hover:bg-amber-500'
                 }`}
@@ -1030,16 +1385,42 @@ export default function App() {
           {gameState === 'FINISHED' && (
             <motion.div 
               key="finished"
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-slate-900 p-10 rounded-3xl shadow-2xl text-center space-y-8 border border-slate-800"
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-slate-900 p-8 rounded-3xl shadow-2xl text-center space-y-8 border border-slate-800"
             >
-              <Trophy size={100} className="text-amber-400 mx-auto drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" />
-              <div className="space-y-2">
-                <h2 className="text-4xl font-serif font-black text-amber-400 leading-tight uppercase tracking-tighter">{t.bravo} {teamInfo.name}!</h2>
-                <p className="text-xl text-slate-300 font-light">
-                  {t.congrats}
-                </p>
+              {isGameOver ? (
+                <>
+                  <div className="bg-orange-600/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto border border-orange-600/20">
+                    <X className="text-orange-600" size={48} />
+                  </div>
+                  <h2 className="text-4xl font-serif font-black text-orange-600 uppercase tracking-tighter">{t.gameOver}</h2>
+                  <p className="text-slate-400">{t.timeExceeded}</p>
+                </>
+              ) : (
+                <>
+                  <div className="bg-amber-400/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto border border-amber-400/20">
+                    <Trophy className="text-amber-400" size={48} />
+                  </div>
+                  <h2 className="text-4xl font-serif font-black text-amber-400 uppercase tracking-tighter">{t.victory}</h2>
+                  <p className="text-slate-400">{t.victoryDesc}</p>
+                </>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-inner">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t.score}</p>
+                  <p className="text-3xl font-black text-amber-400">{score}</p>
+                  <p className="text-[10px] font-black text-slate-600 uppercase">{t.totalPossible} {maxPossibleScore}</p>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-inner">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t.diamonds}</p>
+                  <div className="flex items-center justify-center gap-1">
+                    <Package className="text-cyan-400" size={20} />
+                    <p className="text-3xl font-black text-cyan-400">{score}</p>
+                  </div>
+                </div>
               </div>
 
               {(() => {
@@ -1141,14 +1522,9 @@ export default function App() {
           verificationMethod={verificationMethod}
           gpsThreshold={gpsThreshold}
           gpsViewMode={gpsViewMode}
-          onUpdate={(newCp, newId, newMethod, newParentId, newThreshold, newViewMode) => {
-            setCheckpoints(newCp);
-            setGameId(newId);
-            setVerificationMethod(newMethod);
-            setGameParentId(newParentId);
-            if (newThreshold !== undefined) setGpsThreshold(newThreshold);
-            if (newViewMode !== undefined) setGpsViewMode(newViewMode);
-          }}
+          timeLimit={timeLimit}
+          extraTimeLimit={extraTimeLimit}
+          onUpdate={handleUpdate}
           onPrint={() => setGameState('PRINT')}
           onClose={() => setShowParentPanel(false)}
         />

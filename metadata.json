@@ -1,6 +1,6 @@
 {
   "name": "Mystery Trail",
-  "description": "Interaktywna gra terenowa dla dzieci typu escape room. Rozwiązuj zagadki, skanuj kody QR i znajdź ukryty skarb.",
+  "description": "Interaktywna gra terenowa dla Graczy w każdym wieku typu escape room. Rozwiązuj zagadki, skanuj kody QR i znajdź ukryty skarb.",
   "requestFramePermissions": [
     "camera",
     "microphone",
