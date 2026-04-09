@@ -45,6 +45,8 @@ export interface TeamInfo {
 export interface GameData {
   id: string;
   parentId: string;
+  name?: string;
+  description?: string;
   checkpoints: Checkpoint[];
   createdAt: number;
   verificationMethod?: 'qr' | 'passcode' | 'gps';

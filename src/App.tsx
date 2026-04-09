@@ -68,6 +68,8 @@ export default function App() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [gameId, setGameId] = useState<string>('');
   const [gameParentId, setGameParentId] = useState<string>('');
+  const [gameName, setGameName] = useState<string>('');
+  const [gameDescription, setGameDescription] = useState<string>('');
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [showParentPanel, setShowParentPanel] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -600,6 +602,8 @@ export default function App() {
         setGpsViewMode(gameData.gpsViewMode || 'radar');
         setGameId(id.toUpperCase());
         setGameParentId(gameData.parentId);
+        setGameName(gameData.name || '');
+        setGameDescription(gameData.description || '');
         localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData.checkpoints));
         localStorage.setItem(GAME_ID_KEY, id.toUpperCase());
         localStorage.setItem(PARENT_ID_KEY, gameData.parentId);
@@ -638,7 +642,9 @@ export default function App() {
     newThreshold?: number,
     newViewMode?: 'radar' | 'map' | 'satellite',
     newTimeLimit?: number,
-    newExtraTimeLimit?: number
+    newExtraTimeLimit?: number,
+    newName?: string,
+    newDescription?: string
   ) => {
     setCheckpoints(newCheckpoints);
     setGameId(newId);
@@ -646,6 +652,8 @@ export default function App() {
     setGameParentId(newParentId);
     if (newThreshold !== undefined) setGpsThreshold(newThreshold);
     if (newViewMode !== undefined) setGpsViewMode(newViewMode);
+    if (newName !== undefined) setGameName(newName);
+    if (newDescription !== undefined) setGameDescription(newDescription);
     if (newTimeLimit !== undefined) {
       setTimeLimit(newTimeLimit);
       localStorage.setItem('mystery_trail_time_limit', newTimeLimit.toString());
@@ -778,8 +786,11 @@ export default function App() {
               </div>
               
               <h2 className="text-4xl sm:text-5xl font-serif font-black text-amber-400 uppercase tracking-[0.1em] drop-shadow-[0_2px_10px_rgba(251,191,36,0.3)]">{t.title}</h2>
+              {gameName && (
+                <h3 className="text-xl sm:text-2xl font-serif font-bold text-slate-200 uppercase tracking-widest mt-2">{gameName}</h3>
+              )}
               <p className="text-sm text-slate-400 font-medium mt-1 mb-4 leading-relaxed max-w-xs mx-auto">
-                {t.subtitle}
+                {gameDescription || t.subtitle}
               </p>
               <p className="text-lg text-slate-300 font-light">
                 {checkpoints.length > 0 ? t.welcome : t.firstGame}
@@ -1524,6 +1535,8 @@ export default function App() {
           gpsViewMode={gpsViewMode}
           timeLimit={timeLimit}
           extraTimeLimit={extraTimeLimit}
+          gameName={gameName}
+          gameDescription={gameDescription}
           onUpdate={handleUpdate}
           onPrint={() => setGameState('PRINT')}
           onClose={() => setShowParentPanel(false)}

@@ -41,8 +41,10 @@ import {
   GoogleAuthProvider,
   User
 } from 'firebase/auth';
-import { auth } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
 import { QRCodeSVG } from 'qrcode.react';
+import { Settings } from 'lucide-react';
 
 interface ParentPanelProps {
   checkpoints: Checkpoint[];
@@ -53,6 +55,8 @@ interface ParentPanelProps {
   gpsViewMode?: 'radar' | 'map' | 'satellite';
   timeLimit?: number;
   extraTimeLimit?: number;
+  gameName?: string;
+  gameDescription?: string;
   onUpdate: (
     newCheckpoints: Checkpoint[], 
     newGameId: string, 
@@ -61,7 +65,9 @@ interface ParentPanelProps {
     gpsThreshold?: number,
     gpsViewMode?: 'radar' | 'map' | 'satellite',
     timeLimit?: number,
-    extraTimeLimit?: number
+    extraTimeLimit?: number,
+    gameName?: string,
+    gameDescription?: string
   ) => void;
   onPrint: () => void;
   onClose: () => void;
@@ -76,6 +82,8 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
   gpsViewMode = 'radar',
   timeLimit = 0,
   extraTimeLimit = 0,
+  gameName = '',
+  gameDescription = '',
   onUpdate, 
   onPrint, 
   onClose 
@@ -88,6 +96,8 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
   const [localGpsViewMode, setLocalGpsViewMode] = useState<'radar' | 'map' | 'satellite'>(gpsViewMode);
   const [localTimeLimit, setLocalTimeLimit] = useState<number>(timeLimit);
   const [localExtraTimeLimit, setLocalExtraTimeLimit] = useState<number>(extraTimeLimit);
+  const [localGameName, setLocalGameName] = useState<string>(gameName);
+  const [localGameDescription, setLocalGameDescription] = useState<string>(gameDescription);
   const [isTimePressure, setIsTimePressure] = useState<boolean>(timeLimit > 0);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -135,6 +145,14 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
   useEffect(() => {
     setLocalExtraTimeLimit(extraTimeLimit);
   }, [extraTimeLimit]);
+
+  useEffect(() => {
+    setLocalGameName(gameName);
+  }, [gameName]);
+
+  useEffect(() => {
+    setLocalGameDescription(gameDescription);
+  }, [gameDescription]);
   
   // Auth state
   const [zoomImage, setZoomImage] = useState<string | null>(null);
@@ -418,7 +436,20 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
   const selectGame = (game: GameData) => {
     setLocalCheckpoints(game.checkpoints);
     setLocalMethod(game.verificationMethod || 'qr');
-    onUpdate(game.checkpoints, game.id, game.verificationMethod || 'qr', game.parentId);
+    setLocalGameName(game.name || '');
+    setLocalGameDescription(game.description || '');
+    onUpdate(
+      game.checkpoints, 
+      game.id, 
+      game.verificationMethod || 'qr', 
+      game.parentId,
+      game.gpsThreshold,
+      game.gpsViewMode,
+      game.timeLimit,
+      game.extraTimeLimit,
+      game.name,
+      game.description
+    );
     localStorage.setItem(GAME_ID_KEY, game.id);
     localStorage.setItem(PARENT_ID_KEY, game.parentId);
     setActiveTab('config');
@@ -558,8 +589,23 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
     
     setIsSaving(true);
     try {
-      const savedId = await saveGameToFirebase(gameId, localCheckpoints, localMethod, localGpsThreshold, localGpsViewMode);
-      // Update with time limits
+      const savedId = await saveGameToFirebase(
+        gameId, 
+        localCheckpoints, 
+        localMethod, 
+        localGpsThreshold, 
+        localGpsViewMode, 
+        localTimeLimit, 
+        localExtraTimeLimit
+      );
+      
+      // Update with name and description
+      const gameRef = doc(db, 'games', savedId);
+      await setDoc(gameRef, {
+        name: localGameName,
+        description: localGameDescription
+      }, { merge: true });
+
       const parentId = user?.uid || '';
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localCheckpoints));
       localStorage.setItem('mystery_trail_method', localMethod);
@@ -567,7 +613,18 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
       localStorage.setItem('mystery_trail_gps_view_mode', localGpsViewMode);
       localStorage.setItem(GAME_ID_KEY, savedId);
       localStorage.setItem(PARENT_ID_KEY, parentId);
-      onUpdate(localCheckpoints, savedId, localMethod, parentId, localGpsThreshold, localGpsViewMode, localTimeLimit, localExtraTimeLimit);
+      onUpdate(
+        localCheckpoints, 
+        savedId, 
+        localMethod, 
+        parentId, 
+        localGpsThreshold, 
+        localGpsViewMode, 
+        localTimeLimit, 
+        localExtraTimeLimit,
+        localGameName,
+        localGameDescription
+      );
       showToast(t.savedSuccess + savedId, 'success');
       onClose();
     } catch (error: any) {
@@ -769,6 +826,35 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
 
           {activeTab === 'config' ? (
             <>
+              {/* Game Info */}
+              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 mb-4 shadow-xl space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Settings size={16} className="text-amber-400" />
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.configTitle}</label>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1 ml-1 tracking-widest">{t.gameNameLabel}</label>
+                    <input 
+                      type="text"
+                      value={localGameName}
+                      onChange={(e) => setLocalGameName(e.target.value)}
+                      className="w-full p-3 bg-slate-950 border-2 border-slate-800 rounded-xl focus:border-amber-400 outline-none font-bold text-slate-200"
+                      placeholder={t.gameNamePlaceholder}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1 ml-1 tracking-widest">{t.gameDescLabel}</label>
+                    <textarea 
+                      value={localGameDescription}
+                      onChange={(e) => setLocalGameDescription(e.target.value)}
+                      className="w-full p-3 bg-slate-950 border-2 border-slate-800 rounded-xl focus:border-amber-400 outline-none font-medium text-slate-300 h-20 resize-none"
+                      placeholder={t.gameDescPlaceholder}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-between items-center mb-4">
                 <button 
                   onClick={startNewGame}
@@ -974,7 +1060,7 @@ export const ParentPanel: React.FC<ParentPanelProps> = ({
                             value={cp.name}
                             onChange={(e) => updateCheckpoint(cp.id, { name: e.target.value })}
                             className="w-full p-2.5 text-base font-bold rounded-lg border-2 border-slate-800 focus:border-amber-400 focus:bg-slate-950 bg-slate-950 text-slate-200 outline-none transition-all shadow-inner"
-                            placeholder={language === 'pl' ? 'Gdzie ukryjesz kod?' : 'Where will you hide the code?'}
+                            placeholder={t.stepNamePlaceholder}
                           />
                         </div>
                         <div>
