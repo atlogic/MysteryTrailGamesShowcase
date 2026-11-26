@@ -676,7 +676,7 @@ export default function App() {
           <div className="bg-amber-400 p-2 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.4)]">
             <Archive className="text-slate-950" size={24} />
           </div>
-          <h1 className="text-lg sm:text-xl font-serif font-black text-amber-400 tracking-widest truncate max-w-[150px] sm:max-w-none uppercase">
+          <h1 className="text-lg sm:text-xl font-serif font-black text-amber-400 tracking-widest truncate max-w-[150px] sm:max-w-none uppercase"><img src={import.meta.env.BASE_URL + "app-icons/v1/apple-touch-icon.png"} width={24} height={24} alt="" className="inline-block align-middle me-2 rounded-md shrink-0" />
             {t.title}
           </h1>
         </div>
