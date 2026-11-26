@@ -1,0 +1,22 @@
+{
+  "name": "Mystery Trail · Demo",
+  "short_name": "Mystery Demo",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "./app-icons/v1/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./app-icons/v1/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
